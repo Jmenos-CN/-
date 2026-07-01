@@ -1,7 +1,9 @@
 package com.jmens.advisor.modules.advisor.service;
 
 import java.util.List;
+import org.springframework.stereotype.Component;
 
+@Component
 public class ComplianceGuard {
 
   private static final String DISCLAIMER = "\n\n风险提示：以上内容仅供投研参考，不构成投资建议。市场有风险，决策需谨慎。";

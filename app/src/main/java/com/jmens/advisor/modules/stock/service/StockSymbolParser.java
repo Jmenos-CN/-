@@ -3,7 +3,9 @@ package com.jmens.advisor.modules.stock.service;
 import com.jmens.advisor.modules.stock.domain.StockSymbol;
 import java.util.regex.Matcher;
 import java.util.regex.Pattern;
+import org.springframework.stereotype.Component;
 
+@Component
 public class StockSymbolParser {
 
   private static final Pattern STOCK_CODE = Pattern.compile("(?<!\\d)([0369]\\d{5})(?!\\d)");

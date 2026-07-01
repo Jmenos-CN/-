@@ -1,0 +1,71 @@
+package com.jmens.advisor.modules.advisor.service;
+
+import static org.assertj.core.api.Assertions.assertThat;
+
+import com.jmens.advisor.modules.advisor.domain.ResearchReport;
+import com.jmens.advisor.modules.stock.domain.KLinePoint;
+import com.jmens.advisor.modules.stock.domain.StockQuote;
+import com.jmens.advisor.modules.stock.domain.StockSymbol;
+import com.jmens.advisor.modules.stock.service.StockDataPort;
+import com.jmens.advisor.modules.stock.service.StockSymbolParser;
+import java.math.BigDecimal;
+import java.time.LocalDateTime;
+import java.util.List;
+import org.junit.jupiter.api.Test;
+
+class AdvisorAnalysisServiceTest {
+
+  @Test
+  void analyzesQueryByParsingSymbolFetchingQuoteAndRunningAgentsWithContext() {
+    StockDataPort stockDataPort = new StubStockDataPort();
+    AdvisorWorkflowService workflowService = new AdvisorWorkflowService(List.of(
+        context -> {
+          assertThat(context).contains("600519", "贵州茅台", "1510.00", "1.34%");
+          return new SingleAgentAnalysis(AgentRole.FUNDAMENTAL, "基本面稳定");
+        },
+        context -> new SingleAgentAnalysis(AgentRole.RISK, "不存在确定性收益，需关注波动风险")
+    ));
+    AdvisorAnalysisService service = new AdvisorAnalysisService(
+        new StockSymbolParser(),
+        stockDataPort,
+        workflowService,
+        new ComplianceGuard()
+    );
+
+    ResearchReport report = service.analyze("帮我分析600519", "full");
+
+    assertThat(report.stockCode()).isEqualTo("600519");
+    assertThat(report.stockName()).isEqualTo("贵州茅台");
+    assertThat(report.quoteSummary()).contains("最新价 1510.00", "涨跌幅 1.34%");
+    assertThat(report.fundamentalView()).isEqualTo("基本面稳定");
+    assertThat(report.riskView()).contains("波动风险");
+    assertThat(report.conclusion()).contains("不构成投资建议");
+    assertThat(report.evidences()).singleElement()
+        .satisfies(evidence -> {
+          assertThat(evidence.source()).isEqualTo("Sina Finance");
+          assertThat(evidence.value()).contains("1510.00");
+        });
+  }
+
+  private static class StubStockDataPort implements StockDataPort {
+
+    @Override
+    public StockQuote getRealtimeQuote(StockSymbol symbol) {
+      return new StockQuote(
+          symbol.code(),
+          "贵州茅台",
+          new BigDecimal("1510.00"),
+          new BigDecimal("1490.00"),
+          new BigDecimal("1.34"),
+          123456L,
+          new BigDecimal("185000000.00"),
+          LocalDateTime.of(2026, 7, 1, 10, 30)
+      );
+    }
+
+    @Override
+    public List<KLinePoint> getRecentKLine(StockSymbol symbol, int days) {
+      return List.of();
+    }
+  }
+}
