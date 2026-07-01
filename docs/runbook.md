@@ -29,7 +29,7 @@ Invoke-RestMethod -Uri "http://localhost:8080/api/advisor/analyze" `
   -Body '{"query":"帮我分析600519","analysisType":"full"}'
 ```
 
-Expected first-milestone response shape:
+Expected response shape:
 
 ```json
 {
@@ -37,8 +37,18 @@ Expected first-milestone response shape:
   "success": true,
   "message": "success",
   "data": {
-    "query": "帮我分析600519",
-    "analysisType": "full"
+    "stockCode": "600519",
+    "stockName": "贵州茅台",
+    "quoteSummary": "最新价 ...",
+    "fundamentalView": "",
+    "technicalView": "",
+    "valuationView": "",
+    "newsView": "",
+    "riskView": "",
+    "conclusion": "...不构成投资建议...",
+    "evidences": []
   }
 }
 ```
+
+The endpoint calls Sina Finance for realtime quote data. If the public Sina endpoint is unavailable, the API returns an error until a fallback data source is added.
