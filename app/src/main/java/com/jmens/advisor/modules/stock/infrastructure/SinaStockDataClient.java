@@ -6,6 +6,11 @@ import com.jmens.advisor.modules.stock.domain.StockSymbol;
 import com.jmens.advisor.modules.stock.service.StockDataPort;
 import java.math.BigDecimal;
 import java.math.RoundingMode;
+import java.net.URI;
+import java.net.http.HttpClient;
+import java.net.http.HttpRequest;
+import java.net.http.HttpResponse;
+import java.nio.charset.Charset;
 import java.time.LocalDate;
 import java.time.LocalDateTime;
 import java.time.LocalTime;
@@ -17,7 +22,21 @@ import org.springframework.stereotype.Component;
 @Component
 public class SinaStockDataClient implements StockDataPort {
 
+  private static final String DEFAULT_QUOTE_URL = "https://hq.sinajs.cn/list=";
+  private static final Charset SINA_CHARSET = Charset.forName("GB18030");
   private static final Pattern QUOTE_BODY = Pattern.compile("\"([^\"]*)\"");
+
+  private final HttpClient httpClient;
+  private final String quoteBaseUrl;
+
+  public SinaStockDataClient() {
+    this(HttpClient.newHttpClient(), DEFAULT_QUOTE_URL);
+  }
+
+  public SinaStockDataClient(HttpClient httpClient, String quoteBaseUrl) {
+    this.httpClient = httpClient;
+    this.quoteBaseUrl = quoteBaseUrl;
+  }
 
   public static StockQuote parseQuote(String code, String raw) {
     Matcher matcher = QUOTE_BODY.matcher(raw);
@@ -52,7 +71,23 @@ public class SinaStockDataClient implements StockDataPort {
 
   @Override
   public StockQuote getRealtimeQuote(StockSymbol symbol) {
-    throw new UnsupportedOperationException("HTTP fetch will be added after parser tests pass");
+    try {
+      HttpRequest request = HttpRequest.newBuilder(URI.create(quoteBaseUrl + symbol.sinaCode()))
+          .header("Referer", "https://finance.sina.com.cn")
+          .GET()
+          .build();
+      HttpResponse<byte[]> response = httpClient.send(request, HttpResponse.BodyHandlers.ofByteArray());
+      if (response.statusCode() >= 400) {
+        throw new IllegalStateException("Sina quote request failed: status=" + response.statusCode());
+      }
+      String raw = new String(response.body(), SINA_CHARSET);
+      return parseQuote(symbol.code(), raw);
+    } catch (InterruptedException e) {
+      Thread.currentThread().interrupt();
+      throw new IllegalStateException("Sina quote request interrupted", e);
+    } catch (Exception e) {
+      throw new IllegalStateException("Sina quote request failed: " + symbol.code(), e);
+    }
   }
 
   @Override
