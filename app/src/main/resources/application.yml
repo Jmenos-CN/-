@@ -4,8 +4,15 @@ server:
 spring:
   application:
     name: a-stock-advisor-agent
+  datasource:
+    url: ${POSTGRES_URL:jdbc:h2:mem:a_stock_advisor;MODE=PostgreSQL;DATABASE_TO_LOWER=TRUE}
+    username: ${POSTGRES_USER:sa}
+    password: ${POSTGRES_PASSWORD:}
+    driver-class-name: ${POSTGRES_DRIVER:org.h2.Driver}
   autoconfigure:
     exclude:
       - org.redisson.spring.starter.RedissonAutoConfigurationV4
   jpa:
+    hibernate:
+      ddl-auto: none
     open-in-view: false

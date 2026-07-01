@@ -18,6 +18,8 @@
 .\gradlew.bat :app:bootRun --console=plain
 ```
 
+The first milestone starts with an H2 in-memory datasource by default. PostgreSQL environment variables are only required after persistence is implemented.
+
 ## Analyze API
 
 ```powershell
