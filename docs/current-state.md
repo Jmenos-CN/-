@@ -28,5 +28,6 @@ Not implemented:
 Known notes:
 
 - Unit and MVC contract tests do not require a running Redis instance.
-- Redisson auto-configuration is excluded in test resources to keep smoke tests local and deterministic.
+- Redisson auto-configuration is excluded in the first milestone because no Redis cache adapter is wired yet.
+  Re-enable it when implementing the real Redis cache or Redis Stream milestone.
 - The first milestone intentionally returns an API contract placeholder instead of a full real report.

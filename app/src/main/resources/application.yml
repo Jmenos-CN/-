@@ -1,0 +1,11 @@
+server:
+  port: ${SERVER_PORT:8080}
+
+spring:
+  application:
+    name: a-stock-advisor-agent
+  autoconfigure:
+    exclude:
+      - org.redisson.spring.starter.RedissonAutoConfigurationV4
+  jpa:
+    open-in-view: false
