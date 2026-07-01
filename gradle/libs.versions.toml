@@ -1,0 +1,16 @@
+[versions]
+spring-boot = "4.0.1"
+spring-dependency-management = "1.1.7"
+langchain4j = "1.14.1"
+redisson = "4.0.0"
+junit-jupiter = "5.12.0"
+lombok = "1.18.36"
+
+[libraries]
+langchain4j-open-ai = { module = "dev.langchain4j:langchain4j-open-ai", version.ref = "langchain4j" }
+junit-jupiter = { module = "org.junit.jupiter:junit-jupiter", version.ref = "junit-jupiter" }
+lombok = { module = "org.projectlombok:lombok", version.ref = "lombok" }
+
+[plugins]
+spring-boot = { id = "org.springframework.boot", version.ref = "spring-boot" }
+spring-dependency-management = { id = "io.spring.dependency-management", version.ref = "spring-dependency-management" }
