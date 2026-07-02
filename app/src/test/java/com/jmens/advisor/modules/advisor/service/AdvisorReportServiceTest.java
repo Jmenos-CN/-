@@ -2,6 +2,7 @@ package com.jmens.advisor.modules.advisor.service;
 
 import static org.assertj.core.api.Assertions.assertThat;
 
+import com.jmens.advisor.modules.advisor.domain.AdvisorReportSummary;
 import com.jmens.advisor.modules.advisor.domain.DataEvidence;
 import com.jmens.advisor.modules.advisor.domain.ResearchReport;
 import java.time.LocalDateTime;
@@ -28,6 +29,33 @@ class AdvisorReportServiceTest {
     assertThat(saved.fundamentalView()).isEqualTo("基本面稳定");
     assertThat(saved.evidences()).singleElement()
         .satisfies(evidence -> assertThat(evidence.source()).isEqualTo("Sina Finance"));
+  }
+
+  @Test
+  void findsRecentReportsByStockCode() {
+    reportService.save(sampleReport());
+    reportService.save(new ResearchReport(
+        "000001",
+        "平安银行",
+        LocalDateTime.of(2026, 7, 2, 11, 0),
+        "最新价 10.00，涨跌幅 0.10%",
+        "基本面正常",
+        "技术面震荡",
+        "估值中性",
+        "新闻数据暂缺",
+        "需关注波动风险，不构成投资建议",
+        "综合分析仅供投研参考，不构成投资建议。",
+        List.of()
+    ));
+
+    List<AdvisorReportSummary> reports = reportService.findRecentReports("600519");
+
+    assertThat(reports).singleElement()
+        .satisfies(summary -> {
+          assertThat(summary.stockCode()).isEqualTo("600519");
+          assertThat(summary.stockName()).isEqualTo("贵州茅台");
+          assertThat(summary.quoteSummary()).contains("最新价 1200.00");
+        });
   }
 
   private ResearchReport sampleReport() {

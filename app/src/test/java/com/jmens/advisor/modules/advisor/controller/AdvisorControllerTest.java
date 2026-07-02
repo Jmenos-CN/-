@@ -1,10 +1,13 @@
 package com.jmens.advisor.modules.advisor.controller;
 
 import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.post;
+import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.get;
 import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.jsonPath;
 import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.status;
 
+import com.jmens.advisor.modules.advisor.domain.AdvisorReportSummary;
 import com.jmens.advisor.modules.advisor.domain.ResearchReport;
+import com.jmens.advisor.modules.advisor.domain.DataEvidence;
 import com.jmens.advisor.modules.advisor.service.AdvisorAnalysisService;
 import com.jmens.advisor.modules.advisor.service.AgentRole;
 import com.jmens.advisor.modules.advisor.service.AdvisorReportService;
@@ -41,7 +44,9 @@ class AdvisorControllerTest {
         new ComplianceGuard(),
         new CapturingAdvisorReportService()
     );
-    mockMvc = MockMvcBuilders.standaloneSetup(new AdvisorController(analysisService)).build();
+    mockMvc = MockMvcBuilders.standaloneSetup(
+        new AdvisorController(analysisService, new StubAdvisorReportService())
+    ).build();
   }
 
   @Test
@@ -58,6 +63,24 @@ class AdvisorControllerTest {
         .andExpect(jsonPath("$.data.conclusion").value(org.hamcrest.Matchers.containsString("不构成投资建议")));
   }
 
+  @Test
+  void returnsReportDetailById() throws Exception {
+    mockMvc.perform(get("/api/advisor/reports/1"))
+        .andExpect(status().isOk())
+        .andExpect(jsonPath("$.success").value(true))
+        .andExpect(jsonPath("$.data.stockCode").value("600519"))
+        .andExpect(jsonPath("$.data.stockName").value("贵州茅台"));
+  }
+
+  @Test
+  void returnsRecentReportsByStockCode() throws Exception {
+    mockMvc.perform(get("/api/advisor/reports").param("stockCode", "600519"))
+        .andExpect(status().isOk())
+        .andExpect(jsonPath("$.success").value(true))
+        .andExpect(jsonPath("$.data[0].id").value(1))
+        .andExpect(jsonPath("$.data[0].stockCode").value("600519"));
+  }
+
   private static class CapturingAdvisorReportService extends AdvisorReportService {
 
     CapturingAdvisorReportService() {
@@ -67,6 +90,50 @@ class AdvisorControllerTest {
     @Override
     public Long save(ResearchReport report) {
       return 1L;
+    }
+  }
+
+  private static class StubAdvisorReportService extends AdvisorReportService {
+
+    StubAdvisorReportService() {
+      super(null, null);
+    }
+
+    @Override
+    public ResearchReport getReport(Long id) {
+      return sampleReport();
+    }
+
+    @Override
+    public List<AdvisorReportSummary> findRecentReports(String stockCode) {
+      return List.of(new AdvisorReportSummary(
+          1L,
+          stockCode,
+          "贵州茅台",
+          "最新价 1510.00，涨跌幅 1.34%",
+          LocalDateTime.of(2026, 7, 1, 10, 30)
+      ));
+    }
+
+    private ResearchReport sampleReport() {
+      return new ResearchReport(
+          "600519",
+          "贵州茅台",
+          LocalDateTime.of(2026, 7, 1, 10, 30),
+          "最新价 1510.00，涨跌幅 1.34%",
+          "基本面稳定",
+          "技术面震荡",
+          "估值数据不足",
+          "新闻数据暂缺",
+          "需关注波动风险，不构成投资建议",
+          "综合分析仅供投研参考，不构成投资建议。",
+          List.of(new DataEvidence(
+              "Sina Finance",
+              "贵州茅台实时行情",
+              "最新价 1510.00",
+              LocalDateTime.of(2026, 7, 1, 10, 30)
+          ))
+      );
     }
   }
 
