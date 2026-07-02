@@ -9,11 +9,14 @@ import com.jmens.advisor.common.cache.CacheTtlProperties;
 import com.jmens.advisor.common.cache.InMemoryCacheClient;
 import com.jmens.advisor.common.cache.JsonCacheService;
 import com.jmens.advisor.modules.advisor.domain.AdvisorReportSummary;
+import com.jmens.advisor.modules.advisor.domain.AdvisorTaskResponse;
 import com.jmens.advisor.modules.advisor.domain.ResearchReport;
 import com.jmens.advisor.modules.advisor.domain.DataEvidence;
 import com.jmens.advisor.modules.advisor.service.AdvisorAnalysisService;
 import com.jmens.advisor.modules.advisor.service.AgentRole;
 import com.jmens.advisor.modules.advisor.service.AdvisorReportService;
+import com.jmens.advisor.modules.advisor.service.AdvisorTaskService;
+import com.jmens.advisor.modules.advisor.service.AdvisorTaskStatus;
 import com.jmens.advisor.modules.advisor.service.AdvisorWorkflowService;
 import com.jmens.advisor.modules.advisor.service.ComplianceGuard;
 import com.jmens.advisor.modules.advisor.service.SingleAgentAnalysis;
@@ -50,7 +53,7 @@ class AdvisorControllerTest {
         new CacheTtlProperties(null, null, null, null, null)
     );
     mockMvc = MockMvcBuilders.standaloneSetup(
-        new AdvisorController(analysisService, new StubAdvisorReportService())
+        new AdvisorController(analysisService, new StubAdvisorReportService(), new StubAdvisorTaskService())
     ).build();
   }
 
@@ -84,6 +87,27 @@ class AdvisorControllerTest {
         .andExpect(jsonPath("$.success").value(true))
         .andExpect(jsonPath("$.data[0].id").value(1))
         .andExpect(jsonPath("$.data[0].stockCode").value("600519"));
+  }
+
+  @Test
+  void createsAsyncAnalysisTask() throws Exception {
+    mockMvc.perform(post("/api/advisor/tasks")
+            .contentType(MediaType.APPLICATION_JSON)
+            .content("{\"query\":\"帮我分析600519\",\"analysisType\":\"full\"}"))
+        .andExpect(status().isOk())
+        .andExpect(jsonPath("$.success").value(true))
+        .andExpect(jsonPath("$.data.taskId").value("task-1"))
+        .andExpect(jsonPath("$.data.status").value("PENDING"));
+  }
+
+  @Test
+  void returnsAsyncAnalysisTaskById() throws Exception {
+    mockMvc.perform(get("/api/advisor/tasks/task-1"))
+        .andExpect(status().isOk())
+        .andExpect(jsonPath("$.success").value(true))
+        .andExpect(jsonPath("$.data.taskId").value("task-1"))
+        .andExpect(jsonPath("$.data.status").value("COMPLETED"))
+        .andExpect(jsonPath("$.data.reportId").value(1));
   }
 
   private static class CapturingAdvisorReportService extends AdvisorReportService {
@@ -138,6 +162,41 @@ class AdvisorControllerTest {
               "最新价 1510.00",
               LocalDateTime.of(2026, 7, 1, 10, 30)
           ))
+      );
+    }
+  }
+
+  private static class StubAdvisorTaskService extends AdvisorTaskService {
+
+    StubAdvisorTaskService() {
+      super(null, null);
+    }
+
+    @Override
+    public AdvisorTaskResponse createTask(String query, String analysisType) {
+      return new AdvisorTaskResponse(
+          "task-1",
+          query,
+          analysisType,
+          AdvisorTaskStatus.PENDING,
+          null,
+          null,
+          LocalDateTime.of(2026, 7, 1, 10, 30),
+          LocalDateTime.of(2026, 7, 1, 10, 30)
+      );
+    }
+
+    @Override
+    public AdvisorTaskResponse getTask(String taskId) {
+      return new AdvisorTaskResponse(
+          taskId,
+          "帮我分析600519",
+          "full",
+          AdvisorTaskStatus.COMPLETED,
+          1L,
+          null,
+          LocalDateTime.of(2026, 7, 1, 10, 30),
+          LocalDateTime.of(2026, 7, 1, 10, 31)
       );
     }
   }
