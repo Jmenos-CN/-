@@ -18,6 +18,7 @@ class AdvisorAnalysisServiceTest {
   @Test
   void analyzesQueryByParsingSymbolFetchingQuoteAndRunningAgentsWithContext() {
     StockDataPort stockDataPort = new StubStockDataPort();
+    CapturingAdvisorReportService reportService = new CapturingAdvisorReportService();
     AdvisorWorkflowService workflowService = new AdvisorWorkflowService(List.of(
         context -> {
           assertThat(context).contains("600519", "贵州茅台", "1510.00", "1.34%");
@@ -29,7 +30,8 @@ class AdvisorAnalysisServiceTest {
         new StockSymbolParser(),
         stockDataPort,
         workflowService,
-        new ComplianceGuard()
+        new ComplianceGuard(),
+        reportService
     );
 
     ResearchReport report = service.analyze("帮我分析600519", "full");
@@ -45,6 +47,23 @@ class AdvisorAnalysisServiceTest {
           assertThat(evidence.source()).isEqualTo("Sina Finance");
           assertThat(evidence.value()).contains("1510.00");
         });
+    assertThat(reportService.savedReport.stockCode()).isEqualTo("600519");
+    assertThat(reportService.savedReport.conclusion()).contains("不构成投资建议");
+  }
+
+  private static class CapturingAdvisorReportService extends AdvisorReportService {
+
+    private ResearchReport savedReport;
+
+    CapturingAdvisorReportService() {
+      super(null, null);
+    }
+
+    @Override
+    public Long save(ResearchReport report) {
+      this.savedReport = report;
+      return 1L;
+    }
   }
 
   private static class StubStockDataPort implements StockDataPort {

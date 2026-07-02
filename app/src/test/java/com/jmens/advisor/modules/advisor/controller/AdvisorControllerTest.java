@@ -4,8 +4,10 @@ import static org.springframework.test.web.servlet.request.MockMvcRequestBuilder
 import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.jsonPath;
 import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.status;
 
+import com.jmens.advisor.modules.advisor.domain.ResearchReport;
 import com.jmens.advisor.modules.advisor.service.AdvisorAnalysisService;
 import com.jmens.advisor.modules.advisor.service.AgentRole;
+import com.jmens.advisor.modules.advisor.service.AdvisorReportService;
 import com.jmens.advisor.modules.advisor.service.AdvisorWorkflowService;
 import com.jmens.advisor.modules.advisor.service.ComplianceGuard;
 import com.jmens.advisor.modules.advisor.service.SingleAgentAnalysis;
@@ -36,7 +38,8 @@ class AdvisorControllerTest {
         new StockSymbolParser(),
         new StubStockDataPort(),
         workflowService,
-        new ComplianceGuard()
+        new ComplianceGuard(),
+        new CapturingAdvisorReportService()
     );
     mockMvc = MockMvcBuilders.standaloneSetup(new AdvisorController(analysisService)).build();
   }
@@ -53,6 +56,18 @@ class AdvisorControllerTest {
         .andExpect(jsonPath("$.data.stockName").value("贵州茅台"))
         .andExpect(jsonPath("$.data.quoteSummary").isNotEmpty())
         .andExpect(jsonPath("$.data.conclusion").value(org.hamcrest.Matchers.containsString("不构成投资建议")));
+  }
+
+  private static class CapturingAdvisorReportService extends AdvisorReportService {
+
+    CapturingAdvisorReportService() {
+      super(null, null);
+    }
+
+    @Override
+    public Long save(ResearchReport report) {
+      return 1L;
+    }
   }
 
   private static class StubStockDataPort implements StockDataPort {

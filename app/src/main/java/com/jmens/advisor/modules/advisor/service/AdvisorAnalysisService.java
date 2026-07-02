@@ -19,17 +19,20 @@ public class AdvisorAnalysisService {
   private final StockDataPort stockDataPort;
   private final AdvisorWorkflowService advisorWorkflowService;
   private final ComplianceGuard complianceGuard;
+  private final AdvisorReportService advisorReportService;
 
   public AdvisorAnalysisService(
       StockSymbolParser stockSymbolParser,
       StockDataPort stockDataPort,
       AdvisorWorkflowService advisorWorkflowService,
-      ComplianceGuard complianceGuard
+      ComplianceGuard complianceGuard,
+      AdvisorReportService advisorReportService
   ) {
     this.stockSymbolParser = stockSymbolParser;
     this.stockDataPort = stockDataPort;
     this.advisorWorkflowService = advisorWorkflowService;
     this.complianceGuard = complianceGuard;
+    this.advisorReportService = advisorReportService;
   }
 
   public ResearchReport analyze(String query, String analysisType) {
@@ -41,7 +44,7 @@ public class AdvisorAnalysisService {
     String quoteSummary = buildQuoteSummary(quote);
     String conclusion = complianceGuard.sanitize(buildConclusion(quote, analyses));
 
-    return new ResearchReport(
+    ResearchReport report = new ResearchReport(
         quote.code(),
         quote.name(),
         LocalDateTime.now(),
@@ -59,6 +62,8 @@ public class AdvisorAnalysisService {
             quote.quoteTime()
         ))
     );
+    advisorReportService.save(report);
+    return report;
   }
 
   private String buildAgentContext(String query, String analysisType, StockQuote quote) {
