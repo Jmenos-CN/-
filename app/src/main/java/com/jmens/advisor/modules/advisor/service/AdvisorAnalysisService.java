@@ -5,11 +5,14 @@ import com.jmens.advisor.common.cache.CacheTtlProperties;
 import com.jmens.advisor.common.cache.JsonCacheService;
 import com.jmens.advisor.modules.advisor.domain.DataEvidence;
 import com.jmens.advisor.modules.advisor.domain.ResearchReport;
+import com.jmens.advisor.modules.stock.domain.KLinePoint;
 import com.jmens.advisor.modules.stock.domain.StockQuote;
 import com.jmens.advisor.modules.stock.domain.StockSymbol;
 import com.jmens.advisor.modules.stock.service.StockDataPort;
 import com.jmens.advisor.modules.stock.service.StockSymbolParser;
+import java.math.BigDecimal;
 import java.time.LocalDateTime;
+import java.util.Comparator;
 import java.util.EnumMap;
 import java.util.List;
 import java.util.Map;
@@ -17,6 +20,8 @@ import org.springframework.stereotype.Service;
 
 @Service
 public class AdvisorAnalysisService {
+
+  private static final int KLINE_DAYS = 20;
 
   private final StockSymbolParser stockSymbolParser;
   private final StockDataPort stockDataPort;
@@ -44,6 +49,13 @@ public class AdvisorAnalysisService {
     this.ttlProperties = ttlProperties;
   }
 
+  /**
+   * Generates a stock research report from realtime quote, recent K-line data, and Agent outputs.
+   *
+   * @param query user request containing a stock code
+   * @param analysisType requested analysis depth or category
+   * @return generated report snapshot
+   */
   public ResearchReport analyze(String query, String analysisType) {
     StockSymbol symbol = stockSymbolParser.parse(query);
     String normalizedAnalysisType = normalizeAnalysisType(analysisType);
@@ -53,7 +65,9 @@ public class AdvisorAnalysisService {
       return cachedReport.get();
     }
     StockQuote quote = stockDataPort.getRealtimeQuote(symbol);
-    String agentContext = buildAgentContext(query, normalizedAnalysisType, quote);
+    List<KLinePoint> kLines = fetchKLines(symbol);
+    String kLineSummary = buildKLineSummary(kLines);
+    String agentContext = buildAgentContext(query, normalizedAnalysisType, quote, kLineSummary);
     List<SingleAgentAnalysis> analyses = advisorWorkflowService.runAgents(agentContext);
     Map<AgentRole, String> byRole = toRoleMap(analyses);
     String quoteSummary = buildQuoteSummary(quote);
@@ -72,7 +86,7 @@ public class AdvisorAnalysisService {
         conclusion,
         List.of(new DataEvidence(
             "Sina Finance",
-            quote.name() + "实时行情",
+            quote.name() + " realtime quote",
             quoteSummary,
             quote.quoteTime()
         ))
@@ -86,20 +100,36 @@ public class AdvisorAnalysisService {
     return analysisType == null || analysisType.isBlank() ? "full" : analysisType;
   }
 
-  private String buildAgentContext(String query, String analysisType, StockQuote quote) {
-    return """
-        用户问题: %s
-        分析类型: %s
-        股票代码: %s
-        股票名称: %s
-        最新价: %s
-        昨收: %s
-        涨跌幅: %s%%
-        成交量: %d
-        成交额: %s
-        行情时间: %s
+  private List<KLinePoint> fetchKLines(StockSymbol symbol) {
+    try {
+      return stockDataPort.getRecentKLine(symbol, KLINE_DAYS);
+    } catch (RuntimeException ignored) {
+      // K-line is enrichment data; quote-based analysis should still work when the public endpoint is unstable.
+      return List.of();
+    }
+  }
 
-        请基于上述真实行情上下文进行投研分析，禁止输出确定性买卖建议。
+  private String buildAgentContext(
+      String query,
+      String analysisType,
+      StockQuote quote,
+      String kLineSummary
+  ) {
+    return """
+        User query: %s
+        Analysis type: %s
+        Stock code: %s
+        Stock name: %s
+        Latest price: %s
+        Previous close: %s
+        Change percent: %s%%
+        Volume: %d
+        Amount: %s
+        Quote time: %s
+        %s
+
+        financial/news data not configured: do not fabricate revenue, profit, valuation, policy, or news facts.
+        Please produce evidence-based research only. Do not output deterministic buy/sell instructions.
         """.formatted(
         query,
         analysisType,
@@ -110,8 +140,33 @@ public class AdvisorAnalysisService {
         quote.changePercent(),
         quote.volume(),
         quote.amount(),
-        quote.quoteTime()
+        quote.quoteTime(),
+        kLineSummary
     );
+  }
+
+  private String buildKLineSummary(List<KLinePoint> kLines) {
+    if (kLines.isEmpty()) {
+      return "KLine summary: not available";
+    }
+    KLinePoint latest = kLines.get(kLines.size() - 1);
+    BigDecimal high = kLines.stream()
+        .map(KLinePoint::high)
+        .max(Comparator.naturalOrder())
+        .orElse(latest.high());
+    BigDecimal low = kLines.stream()
+        .map(KLinePoint::low)
+        .min(Comparator.naturalOrder())
+        .orElse(latest.low());
+    return "KLine summary: days=%d, latestDate=%s, latestClose=%s, high=%s, low=%s, latestVolume=%d"
+        .formatted(
+            kLines.size(),
+            latest.tradeDate(),
+            latest.close(),
+            high,
+            low,
+            latest.volume()
+        );
   }
 
   private Map<AgentRole, String> toRoleMap(List<SingleAgentAnalysis> analyses) {

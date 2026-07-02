@@ -12,6 +12,7 @@ import com.jmens.advisor.modules.stock.domain.StockSymbol;
 import com.jmens.advisor.modules.stock.service.StockDataPort;
 import com.jmens.advisor.modules.stock.service.StockSymbolParser;
 import java.math.BigDecimal;
+import java.time.LocalDate;
 import java.time.LocalDateTime;
 import java.util.List;
 import org.junit.jupiter.api.Test;
@@ -25,9 +26,11 @@ class AdvisorAnalysisServiceTest {
     AdvisorWorkflowService workflowService = new AdvisorWorkflowService(List.of(
         context -> {
           assertThat(context).contains("600519", "贵州茅台", "1510.00", "1.34%");
+          assertThat(context).contains("KLine summary", "latestClose=1193.01", "high=1210.00", "low=1166.33");
+          assertThat(context).contains("financial/news data not configured");
           return new SingleAgentAnalysis(AgentRole.FUNDAMENTAL, "基本面稳定");
         },
-        context -> new SingleAgentAnalysis(AgentRole.RISK, "不存在确定性收益，需关注波动风险")
+        context -> new SingleAgentAnalysis(AgentRole.RISK, "不存在确定性收益，需要关注波动风险")
     ));
     AdvisorAnalysisService service = new AdvisorAnalysisService(
         new StockSymbolParser(),
@@ -77,6 +80,7 @@ class AdvisorAnalysisServiceTest {
     assertThat(first.stockCode()).isEqualTo("600519");
     assertThat(second.stockCode()).isEqualTo("600519");
     assertThat(stockDataPort.quoteCalls).isEqualTo(1);
+    assertThat(stockDataPort.klineCalls).isEqualTo(1);
     assertThat(agentRunner.calls).isEqualTo(1);
     assertThat(reportService.saveCalls).isEqualTo(1);
   }
@@ -121,11 +125,18 @@ class AdvisorAnalysisServiceTest {
   private static class CountingStockDataPort extends StubStockDataPort {
 
     private int quoteCalls;
+    private int klineCalls;
 
     @Override
     public StockQuote getRealtimeQuote(StockSymbol symbol) {
       quoteCalls++;
       return super.getRealtimeQuote(symbol);
+    }
+
+    @Override
+    public List<KLinePoint> getRecentKLine(StockSymbol symbol, int days) {
+      klineCalls++;
+      return super.getRecentKLine(symbol, days);
     }
   }
 
@@ -147,7 +158,24 @@ class AdvisorAnalysisServiceTest {
 
     @Override
     public List<KLinePoint> getRecentKLine(StockSymbol symbol, int days) {
-      return List.of();
+      return List.of(
+          new KLinePoint(
+              LocalDate.of(2026, 6, 30),
+              new BigDecimal("1187.00"),
+              new BigDecimal("1185.49"),
+              new BigDecimal("1195.67"),
+              new BigDecimal("1176.00"),
+              3960779L
+          ),
+          new KLinePoint(
+              LocalDate.of(2026, 7, 1),
+              new BigDecimal("1180.10"),
+              new BigDecimal("1193.01"),
+              new BigDecimal("1210.00"),
+              new BigDecimal("1166.33"),
+              4247381L
+          )
+      );
     }
   }
 }
