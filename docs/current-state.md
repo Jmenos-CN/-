@@ -11,6 +11,7 @@ Implemented scope:
 - Sina realtime quote HTTP fetch through `StockDataPort`.
 - Sina daily K-line JSONP parser and recent K-line fetch through `StockDataPort#getRecentKLine`.
 - Sina Finance stock news HTML parser and recent news fetch through `StockNewsPort`.
+- Sina news quality enhancement: duplicate filtering, publish-time ranking, and best-effort article summary extraction.
 - Cache key and TTL policy.
 - LangChain4j structured output invoker.
 - Parallel advisor workflow using virtual threads.
@@ -27,8 +28,8 @@ Implemented scope:
   `advisor:report:{code}:{analysisType}`.
 - K-line cache is available with key `stock:kline:{code}:{days}` and default TTL of 1 hour.
 - News cache is available with key `stock:news:{code}:{limit}` and default TTL of 30 minutes.
-- Advisor Agent context now includes recent K-line and stock-news summaries. Financial data remains explicitly marked
-  "not configured" so model prompts do not fabricate unavailable financial facts.
+- Advisor Agent context now includes recent K-line, stock-news titles, links, and article summaries when available.
+  Financial data remains explicitly marked "not configured" so model prompts do not fabricate unavailable financial facts.
 - Redis Stream async analysis tasks are available:
   `POST /api/advisor/tasks` creates a task, `GET /api/advisor/tasks/{taskId}` reads task state.
 - Async task state is persisted in PostgreSQL table `stock_advisor_task`; Redis Stream key `advisor:tasks`
@@ -43,7 +44,7 @@ Not implemented:
 - Portfolio rebalancing.
 - Paid data provider integration.
 - Real financial indicator provider.
-- News article body crawling and news ranking.
+- Secondary news provider integration.
 - React frontend.
 
 Known notes:
@@ -66,3 +67,6 @@ Known notes:
   `/api/advisor/analyze` returned `code=200` for `600519` without K-line fetch errors.
 - News data-source smoke test against remote PostgreSQL and Redis passed on 2026-07-02:
   `/api/advisor/analyze` returned `code=200` for `600519` and included `Sina Finance News` evidence items.
+- News quality smoke test against remote PostgreSQL and Redis passed on 2026-07-02:
+  `/api/advisor/analyze` returned `code=200` for `600519`, included 5 `Sina Finance News` evidence items,
+  and logs contained no Sina news request failures.

@@ -17,6 +17,7 @@ import java.math.BigDecimal;
 import java.time.LocalDate;
 import java.time.LocalDateTime;
 import java.util.List;
+import java.util.concurrent.atomic.AtomicReference;
 import org.junit.jupiter.api.Test;
 
 class AdvisorAnalysisServiceTest {
@@ -91,6 +92,38 @@ class AdvisorAnalysisServiceTest {
     assertThat(stockNewsPort.calls).isEqualTo(1);
     assertThat(agentRunner.calls).isEqualTo(1);
     assertThat(reportService.saveCalls).isEqualTo(1);
+  }
+
+  @Test
+  void includesNewsArticleSummaryInAgentContext() {
+    AtomicReference<String> capturedContext = new AtomicReference<>();
+    StockNewsPort stockNewsPort = (symbol, limit) -> List.of(new StockNewsItem(
+        "Market Article",
+        "https://finance.sina.com.cn/news1.shtml",
+        LocalDateTime.of(2026, 7, 2, 17, 20),
+        "Sina Finance",
+        "Company channel inventory stayed stable."
+    ));
+    AdvisorAnalysisService service = new AdvisorAnalysisService(
+        new StockSymbolParser(),
+        new StubStockDataPort(),
+        stockNewsPort,
+        new AdvisorWorkflowService(List.of(context -> {
+          capturedContext.set(context);
+          return new SingleAgentAnalysis(AgentRole.NEWS, "news analysis");
+        })),
+        new ComplianceGuard(),
+        new CapturingAdvisorReportService(),
+        new JsonCacheService(new InMemoryCacheClient()),
+        new CacheTtlProperties(null, null, null, null, null)
+    );
+
+    service.analyze("Analyze 600519", "full");
+
+    assertThat(capturedContext.get())
+        .contains("News summary")
+        .contains("Market Article")
+        .contains("Company channel inventory stayed stable.");
   }
 
   private static class CapturingAdvisorReportService extends AdvisorReportService {

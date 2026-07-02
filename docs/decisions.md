@@ -92,6 +92,6 @@ Reason:
 
 - The page is addressable by Sina stock symbol, such as `sh600519`, and does not require an API key.
 - Server-rendered HTML is simpler and more stable for the backend than frontend-rendered search pages.
-- The first slice only stores title, URL, publish time, and source; full article crawling and ranking are intentionally
-  left for a later phase.
+- The adapter now ranks by publish time, removes duplicate titles/URLs, and fetches article summaries best-effort.
+- Article crawling failures are non-fatal; title, URL, publish time, and source remain enough for a usable news signal.
 - News failures degrade to an empty news summary so quote and K-line analysis can continue.

@@ -190,9 +190,21 @@ public class AdvisorAnalysisService {
       return "News summary: not available";
     }
     return "News summary:\n" + news.stream()
-        .map(item -> "- [%s] %s (%s)".formatted(item.publishedAt(), item.title(), item.url()))
+        .map(item -> "- [%s] %s%s (%s)".formatted(
+            item.publishedAt(),
+            item.title(),
+            newsSummarySuffix(item),
+            item.url()
+        ))
         .reduce((left, right) -> left + "\n" + right)
         .orElse("");
+  }
+
+  private String newsSummarySuffix(StockNewsItem item) {
+    if (item.summary() == null || item.summary().isBlank()) {
+      return "";
+    }
+    return " - summary: " + item.summary();
   }
 
   private List<DataEvidence> buildEvidences(
