@@ -81,8 +81,8 @@ Reason:
 
 - K-line data improves technical-analysis context without requiring a paid provider.
 - The report should still work from realtime quote data if the public K-line endpoint is temporarily unstable.
-- Financial and news data are explicitly marked as not configured until stable providers are selected, preventing the
-  model from fabricating revenue, valuation, policy, or news facts.
+- Missing enrichment data are explicitly marked as unavailable, preventing the model from fabricating revenue,
+  valuation, policy, or news facts.
 
 ## Use Sina Finance Stock News As First News Provider
 
@@ -95,3 +95,15 @@ Reason:
 - The adapter now ranks by publish time, removes duplicate titles/URLs, and fetches article summaries best-effort.
 - Article crawling failures are non-fatal; title, URL, publish time, and source remain enough for a usable news signal.
 - News failures degrade to an empty news summary so quote and K-line analysis can continue.
+
+## Use Eastmoney Data Center As First Financial Indicator Provider
+
+Decision: fetch latest stock financial metrics from Eastmoney Data Center `RPT_F10_FINANCE_MAINFINADATA`.
+
+Reason:
+
+- The endpoint is addressable by `SECUCODE`, such as `600519.SH`, and does not require an API key for the first slice.
+- The response is structured JSON and includes the core metrics needed by the Agent: EPS, BPS, operating revenue,
+  parent net profit, ROE, and debt ratio.
+- Financial metrics are cached for one day because they change far less frequently than quotes or news.
+- Financial failures degrade to an unavailable financial summary so quote, K-line, and news analysis can continue.

@@ -12,6 +12,7 @@ Implemented scope:
 - Sina daily K-line JSONP parser and recent K-line fetch through `StockDataPort#getRecentKLine`.
 - Sina Finance stock news HTML parser and recent news fetch through `StockNewsPort`.
 - Sina news quality enhancement: duplicate filtering, publish-time ranking, and best-effort article summary extraction.
+- Eastmoney latest financial indicator JSON parser and recent financial snapshot fetch through `StockFinancialPort`.
 - Cache key and TTL policy.
 - LangChain4j structured output invoker.
 - Parallel advisor workflow using virtual threads.
@@ -28,8 +29,10 @@ Implemented scope:
   `advisor:report:{code}:{analysisType}`.
 - K-line cache is available with key `stock:kline:{code}:{days}` and default TTL of 1 hour.
 - News cache is available with key `stock:news:{code}:{limit}` and default TTL of 30 minutes.
+- Financial indicator cache is available with key `stock:finance:{code}` and default TTL of 1 day.
 - Advisor Agent context now includes recent K-line, stock-news titles, links, and article summaries when available.
-  Financial data remains explicitly marked "not configured" so model prompts do not fabricate unavailable financial facts.
+  It also includes latest Eastmoney financial metrics when available. When financial data are unavailable, the prompt
+  still explicitly tells the model not to fabricate revenue, profit, valuation, or policy facts.
 - Redis Stream async analysis tasks are available:
   `POST /api/advisor/tasks` creates a task, `GET /api/advisor/tasks/{taskId}` reads task state.
 - Async task state is persisted in PostgreSQL table `stock_advisor_task`; Redis Stream key `advisor:tasks`
@@ -43,7 +46,6 @@ Not implemented:
 - Real trading.
 - Portfolio rebalancing.
 - Paid data provider integration.
-- Real financial indicator provider.
 - Secondary news provider integration.
 - React frontend.
 
@@ -70,3 +72,6 @@ Known notes:
 - News quality smoke test against remote PostgreSQL and Redis passed on 2026-07-02:
   `/api/advisor/analyze` returned `code=200` for `600519`, included 5 `Sina Finance News` evidence items,
   and logs contained no Sina news request failures.
+- Financial data-source smoke test against remote PostgreSQL and Redis passed on 2026-07-02:
+  `/api/advisor/analyze` returned `code=200` for `600519`, included one `Eastmoney Financial` evidence item with
+  EPS, BPS, revenue, parent net profit, ROE, and debt ratio, and logs contained no Eastmoney financial request failures.

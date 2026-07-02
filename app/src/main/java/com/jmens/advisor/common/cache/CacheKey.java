@@ -17,6 +17,10 @@ public final class CacheKey {
     return "stock:news:" + code + ":" + limit;
   }
 
+  public static String finance(String code) {
+    return "stock:finance:" + code;
+  }
+
   public static String report(String code, String analysisType) {
     return "advisor:report:" + code + ":" + analysisType;
   }

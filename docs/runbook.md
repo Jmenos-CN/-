@@ -57,6 +57,7 @@ Cache keys:
 - quote: `stock:quote:{code}`
 - kline: `stock:kline:{code}:{days}`
 - news: `stock:news:{code}:{limit}`
+- finance: `stock:finance:{code}`
 - report: `advisor:report:{code}:{analysisType}`
 
 If Redis is unavailable, cache reads behave as misses and cache writes are ignored.
@@ -147,15 +148,15 @@ Expected response shape:
 ```
 
 The endpoint calls Sina Finance for realtime quote data. If the public Sina endpoint is unavailable, the API returns an error until a fallback data source is added.
-The endpoint also attempts to fetch recent daily K-line data and recent stock news from Sina. News items are deduplicated,
-ranked by publish time, and enriched with a best-effort article summary when Sina article pages are reachable. K-line,
-news-list, and article-summary failures are treated as enrichment-data misses, so quote-based analysis can still continue.
-Financial provider data are not configured in this slice; the Agent context explicitly tells the model not to fabricate
-financial facts.
+The endpoint also attempts to fetch recent daily K-line data and recent stock news from Sina, plus latest financial
+indicators from Eastmoney Data Center. News items are deduplicated, ranked by publish time, and enriched with a
+best-effort article summary when Sina article pages are reachable. K-line, news-list, article-summary, and financial
+indicator failures are treated as enrichment-data misses, so quote-based analysis can still continue. When financial
+metrics are unavailable, the Agent context explicitly tells the model not to fabricate financial facts.
 
 ## K-Line Smoke Test
 
-Use a fresh `analysisType` to bypass report cache and verify the K-line/news-enriched path:
+Use a fresh `analysisType` to bypass report cache and verify the K-line/news/financial enriched path:
 
 ```powershell
 $analysisType = "news-smoke-" + [DateTimeOffset]::Now.ToUnixTimeSeconds()
@@ -173,8 +174,10 @@ Expected response:
 - `data.stockCode` is `600519`
 - application logs contain no `Sina kline request failed` error
 - response `data.evidences` includes one or more `Sina Finance News` entries when Sina news is reachable
+- response `data.evidences` includes one `Eastmoney Financial` entry when Eastmoney financial data are reachable
 - Agent context includes news titles and article summaries when article pages are reachable
 - application logs contain no `Sina stock news request failed` error
+- application logs contain no `Eastmoney financial request failed` error
 
 ## Report History APIs
 

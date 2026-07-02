@@ -21,13 +21,16 @@ import com.jmens.advisor.modules.advisor.service.AdvisorWorkflowService;
 import com.jmens.advisor.modules.advisor.service.ComplianceGuard;
 import com.jmens.advisor.modules.advisor.service.SingleAgentAnalysis;
 import com.jmens.advisor.modules.stock.domain.KLinePoint;
+import com.jmens.advisor.modules.stock.domain.StockFinancialSnapshot;
 import com.jmens.advisor.modules.stock.domain.StockNewsItem;
 import com.jmens.advisor.modules.stock.domain.StockQuote;
 import com.jmens.advisor.modules.stock.domain.StockSymbol;
 import com.jmens.advisor.modules.stock.service.StockDataPort;
+import com.jmens.advisor.modules.stock.service.StockFinancialPort;
 import com.jmens.advisor.modules.stock.service.StockNewsPort;
 import com.jmens.advisor.modules.stock.service.StockSymbolParser;
 import java.math.BigDecimal;
+import java.time.LocalDate;
 import java.time.LocalDateTime;
 import java.util.List;
 import org.junit.jupiter.api.BeforeEach;
@@ -49,6 +52,7 @@ class AdvisorControllerTest {
         new StockSymbolParser(),
         new StubStockDataPort(),
         new StubStockNewsPort(),
+        new StubStockFinancialPort(),
         workflowService,
         new ComplianceGuard(),
         new CapturingAdvisorReportService(),
@@ -236,6 +240,25 @@ class AdvisorControllerTest {
           LocalDateTime.of(2026, 7, 2, 17, 20),
           "Sina Finance"
       ));
+    }
+  }
+
+  private static class StubStockFinancialPort implements StockFinancialPort {
+
+    @Override
+    public StockFinancialSnapshot getLatestSnapshot(StockSymbol symbol) {
+      return new StockFinancialSnapshot(
+          symbol.code(),
+          "Kweichow Moutai",
+          LocalDate.of(2026, 3, 31),
+          "Q1",
+          new BigDecimal("21.76"),
+          new BigDecimal("216.32234994607"),
+          new BigDecimal("54702912385.23"),
+          new BigDecimal("27242512886.45"),
+          new BigDecimal("10.57"),
+          new BigDecimal("12.1227489682")
+      );
     }
   }
 }

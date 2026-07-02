@@ -6,13 +6,16 @@ import com.jmens.advisor.common.cache.JsonCacheService;
 import com.jmens.advisor.modules.advisor.domain.DataEvidence;
 import com.jmens.advisor.modules.advisor.domain.ResearchReport;
 import com.jmens.advisor.modules.stock.domain.KLinePoint;
+import com.jmens.advisor.modules.stock.domain.StockFinancialSnapshot;
 import com.jmens.advisor.modules.stock.domain.StockNewsItem;
 import com.jmens.advisor.modules.stock.domain.StockQuote;
 import com.jmens.advisor.modules.stock.domain.StockSymbol;
 import com.jmens.advisor.modules.stock.service.StockDataPort;
+import com.jmens.advisor.modules.stock.service.StockFinancialPort;
 import com.jmens.advisor.modules.stock.service.StockNewsPort;
 import com.jmens.advisor.modules.stock.service.StockSymbolParser;
 import java.math.BigDecimal;
+import java.math.RoundingMode;
 import java.time.LocalDateTime;
 import java.util.ArrayList;
 import java.util.Comparator;
@@ -30,6 +33,7 @@ public class AdvisorAnalysisService {
   private final StockSymbolParser stockSymbolParser;
   private final StockDataPort stockDataPort;
   private final StockNewsPort stockNewsPort;
+  private final StockFinancialPort stockFinancialPort;
   private final AdvisorWorkflowService advisorWorkflowService;
   private final ComplianceGuard complianceGuard;
   private final AdvisorReportService advisorReportService;
@@ -40,6 +44,7 @@ public class AdvisorAnalysisService {
       StockSymbolParser stockSymbolParser,
       StockDataPort stockDataPort,
       StockNewsPort stockNewsPort,
+      StockFinancialPort stockFinancialPort,
       AdvisorWorkflowService advisorWorkflowService,
       ComplianceGuard complianceGuard,
       AdvisorReportService advisorReportService,
@@ -49,6 +54,7 @@ public class AdvisorAnalysisService {
     this.stockSymbolParser = stockSymbolParser;
     this.stockDataPort = stockDataPort;
     this.stockNewsPort = stockNewsPort;
+    this.stockFinancialPort = stockFinancialPort;
     this.advisorWorkflowService = advisorWorkflowService;
     this.complianceGuard = complianceGuard;
     this.advisorReportService = advisorReportService;
@@ -74,9 +80,18 @@ public class AdvisorAnalysisService {
     StockQuote quote = stockDataPort.getRealtimeQuote(symbol);
     List<KLinePoint> kLines = fetchKLines(symbol);
     List<StockNewsItem> news = fetchNews(symbol);
+    StockFinancialSnapshot financial = fetchFinancial(symbol);
     String kLineSummary = buildKLineSummary(kLines);
     String newsSummary = buildNewsSummary(news);
-    String agentContext = buildAgentContext(query, normalizedAnalysisType, quote, kLineSummary, newsSummary);
+    String financialSummary = buildFinancialSummary(financial);
+    String agentContext = buildAgentContext(
+        query,
+        normalizedAnalysisType,
+        quote,
+        kLineSummary,
+        newsSummary,
+        financialSummary
+    );
     List<SingleAgentAnalysis> analyses = advisorWorkflowService.runAgents(agentContext);
     Map<AgentRole, String> byRole = toRoleMap(analyses);
     String quoteSummary = buildQuoteSummary(quote);
@@ -93,7 +108,7 @@ public class AdvisorAnalysisService {
         byRole.getOrDefault(AgentRole.NEWS, ""),
         byRole.getOrDefault(AgentRole.RISK, ""),
         conclusion,
-        buildEvidences(quote, quoteSummary, news)
+        buildEvidences(quote, quoteSummary, news, financial)
     );
     advisorReportService.save(report);
     cacheService.put(reportCacheKey, report, ttlProperties.report());
@@ -122,12 +137,22 @@ public class AdvisorAnalysisService {
     }
   }
 
+  private StockFinancialSnapshot fetchFinancial(StockSymbol symbol) {
+    try {
+      return stockFinancialPort.getLatestSnapshot(symbol);
+    } catch (RuntimeException ignored) {
+      // Financial metrics enrich the prompt; report generation should continue when the public endpoint is unstable.
+      return null;
+    }
+  }
+
   private String buildAgentContext(
       String query,
       String analysisType,
       StockQuote quote,
       String kLineSummary,
-      String newsSummary
+      String newsSummary,
+      String financialSummary
   ) {
     return """
         User query: %s
@@ -142,9 +167,10 @@ public class AdvisorAnalysisService {
         Quote time: %s
         %s
         %s
+        %s
 
-        financial data not configured: do not fabricate revenue, profit, valuation, or policy facts.
-        Please produce evidence-based research only. Do not output deterministic buy/sell instructions.
+        Please produce evidence-based research only. Do not fabricate facts that are not present in the context.
+        Do not output deterministic buy/sell instructions.
         """.formatted(
         query,
         analysisType,
@@ -157,7 +183,8 @@ public class AdvisorAnalysisService {
         quote.amount(),
         quote.quoteTime(),
         kLineSummary,
-        newsSummary
+        newsSummary,
+        financialSummary
     );
   }
 
@@ -207,10 +234,49 @@ public class AdvisorAnalysisService {
     return " - summary: " + item.summary();
   }
 
+  private String buildFinancialSummary(StockFinancialSnapshot financial) {
+    if (financial == null) {
+      return "Financial summary: not available. financial data not configured: do not fabricate revenue, profit, valuation, or policy facts.";
+    }
+    return "Financial summary: reportDate=%s, reportType=%s, eps=%s, bps=%s, revenue=%s, parentNetProfit=%s, roe=%s, debtRatio=%s"
+        .formatted(
+            financial.reportDate(),
+            financial.reportType(),
+            format(financial.eps(), 2),
+            format(financial.bps(), 2),
+            format(financial.totalOperatingRevenue(), 2),
+            format(financial.parentNetProfit(), 2),
+            format(financial.roe(), 2),
+            format(financial.debtRatio(), 2)
+        );
+  }
+
+  private String buildFinancialEvidenceValue(StockFinancialSnapshot financial) {
+    return "reportDate=%s, reportType=%s, eps=%s, bps=%s, revenue=%s, parentNetProfit=%s, roe=%s, debtRatio=%s"
+        .formatted(
+            financial.reportDate(),
+            financial.reportType(),
+            format(financial.eps(), 2),
+            format(financial.bps(), 2),
+            format(financial.totalOperatingRevenue(), 2),
+            format(financial.parentNetProfit(), 2),
+            format(financial.roe(), 2),
+            format(financial.debtRatio(), 2)
+        );
+  }
+
+  private String format(BigDecimal value, int scale) {
+    if (value == null) {
+      return "n/a";
+    }
+    return value.setScale(scale, RoundingMode.HALF_UP).stripTrailingZeros().toPlainString();
+  }
+
   private List<DataEvidence> buildEvidences(
       StockQuote quote,
       String quoteSummary,
-      List<StockNewsItem> news
+      List<StockNewsItem> news,
+      StockFinancialSnapshot financial
   ) {
     List<DataEvidence> evidences = new ArrayList<>();
     evidences.add(new DataEvidence(
@@ -225,6 +291,14 @@ public class AdvisorAnalysisService {
           item.title(),
           item.url(),
           item.publishedAt()
+      ));
+    }
+    if (financial != null) {
+      evidences.add(new DataEvidence(
+          "Eastmoney Financial",
+          financial.stockName() + " latest financial indicators",
+          buildFinancialEvidenceValue(financial),
+          financial.reportDate() == null ? LocalDateTime.now() : financial.reportDate().atStartOfDay()
       ));
     }
     return evidences;
