@@ -13,6 +13,10 @@ public final class CacheKey {
     return "stock:kline:" + code + ":" + days;
   }
 
+  public static String news(String code, int limit) {
+    return "stock:news:" + code + ":" + limit;
+  }
+
   public static String report(String code, String analysisType) {
     return "advisor:report:" + code + ":" + analysisType;
   }
