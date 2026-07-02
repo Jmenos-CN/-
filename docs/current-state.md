@@ -10,6 +10,7 @@ Implemented scope:
 - Sina quote payload parser.
 - Sina realtime quote HTTP fetch through `StockDataPort`.
 - Sina daily K-line JSONP parser and recent K-line fetch through `StockDataPort#getRecentKLine`.
+- Sina Finance stock news HTML parser and recent news fetch through `StockNewsPort`.
 - Cache key and TTL policy.
 - LangChain4j structured output invoker.
 - Parallel advisor workflow using virtual threads.
@@ -25,8 +26,9 @@ Implemented scope:
 - When Redis cache is enabled, quote cache keys use `stock:quote:{code}` and report cache keys use
   `advisor:report:{code}:{analysisType}`.
 - K-line cache is available with key `stock:kline:{code}:{days}` and default TTL of 1 hour.
-- Advisor Agent context now includes a recent K-line summary. Financial and news data are explicitly marked
-  "not configured" so model prompts do not fabricate unavailable facts.
+- News cache is available with key `stock:news:{code}:{limit}` and default TTL of 30 minutes.
+- Advisor Agent context now includes recent K-line and stock-news summaries. Financial data remains explicitly marked
+  "not configured" so model prompts do not fabricate unavailable financial facts.
 - Redis Stream async analysis tasks are available:
   `POST /api/advisor/tasks` creates a task, `GET /api/advisor/tasks/{taskId}` reads task state.
 - Async task state is persisted in PostgreSQL table `stock_advisor_task`; Redis Stream key `advisor:tasks`
@@ -41,7 +43,7 @@ Not implemented:
 - Portfolio rebalancing.
 - Paid data provider integration.
 - Real financial indicator provider.
-- Real news provider and news ranking.
+- News article body crawling and news ranking.
 - React frontend.
 
 Known notes:
@@ -62,3 +64,5 @@ Known notes:
   a new advisor task moved from `PENDING` to `COMPLETED` and produced a report ID.
 - K-line data-source smoke test against remote PostgreSQL and Redis passed on 2026-07-02:
   `/api/advisor/analyze` returned `code=200` for `600519` without K-line fetch errors.
+- News data-source smoke test against remote PostgreSQL and Redis passed on 2026-07-02:
+  `/api/advisor/analyze` returned `code=200` for `600519` and included `Sina Finance News` evidence items.

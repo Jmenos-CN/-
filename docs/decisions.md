@@ -83,3 +83,15 @@ Reason:
 - The report should still work from realtime quote data if the public K-line endpoint is temporarily unstable.
 - Financial and news data are explicitly marked as not configured until stable providers are selected, preventing the
   model from fabricating revenue, valuation, policy, or news facts.
+
+## Use Sina Finance Stock News As First News Provider
+
+Decision: fetch recent stock-related news from Sina Finance's server-rendered stock news page.
+
+Reason:
+
+- The page is addressable by Sina stock symbol, such as `sh600519`, and does not require an API key.
+- Server-rendered HTML is simpler and more stable for the backend than frontend-rendered search pages.
+- The first slice only stores title, URL, publish time, and source; full article crawling and ranking are intentionally
+  left for a later phase.
+- News failures degrade to an empty news summary so quote and K-line analysis can continue.
