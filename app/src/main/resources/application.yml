@@ -25,3 +25,17 @@ advisor:
     model-name: ${ADVISOR_LLM_MODEL:qwen-plus}
     temperature: ${ADVISOR_LLM_TEMPERATURE:0.2}
     timeout: ${ADVISOR_LLM_TIMEOUT:60s}
+
+app:
+  cache:
+    redis:
+      enabled: ${APP_CACHE_REDIS_ENABLED:false}
+      host: ${REDIS_HOST:localhost}
+      port: ${REDIS_PORT:6379}
+      database: ${REDIS_DATABASE:0}
+    ttl:
+      quote: ${APP_CACHE_TTL_QUOTE:15s}
+      kline: ${APP_CACHE_TTL_KLINE:1h}
+      finance: ${APP_CACHE_TTL_FINANCE:1d}
+      news: ${APP_CACHE_TTL_NEWS:30m}
+      report: ${APP_CACHE_TTL_REPORT:10m}
