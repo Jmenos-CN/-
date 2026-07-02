@@ -21,9 +21,11 @@ import com.jmens.advisor.modules.advisor.service.AdvisorWorkflowService;
 import com.jmens.advisor.modules.advisor.service.ComplianceGuard;
 import com.jmens.advisor.modules.advisor.service.SingleAgentAnalysis;
 import com.jmens.advisor.modules.stock.domain.KLinePoint;
+import com.jmens.advisor.modules.stock.domain.StockNewsItem;
 import com.jmens.advisor.modules.stock.domain.StockQuote;
 import com.jmens.advisor.modules.stock.domain.StockSymbol;
 import com.jmens.advisor.modules.stock.service.StockDataPort;
+import com.jmens.advisor.modules.stock.service.StockNewsPort;
 import com.jmens.advisor.modules.stock.service.StockSymbolParser;
 import java.math.BigDecimal;
 import java.time.LocalDateTime;
@@ -46,6 +48,7 @@ class AdvisorControllerTest {
     AdvisorAnalysisService analysisService = new AdvisorAnalysisService(
         new StockSymbolParser(),
         new StubStockDataPort(),
+        new StubStockNewsPort(),
         workflowService,
         new ComplianceGuard(),
         new CapturingAdvisorReportService(),
@@ -220,6 +223,19 @@ class AdvisorControllerTest {
     @Override
     public List<KLinePoint> getRecentKLine(StockSymbol symbol, int days) {
       return List.of();
+    }
+  }
+
+  private static class StubStockNewsPort implements StockNewsPort {
+
+    @Override
+    public List<StockNewsItem> getRecentNews(StockSymbol symbol, int limit) {
+      return List.of(new StockNewsItem(
+          "贵州茅台新闻",
+          "https://finance.sina.com.cn/news1.shtml",
+          LocalDateTime.of(2026, 7, 2, 17, 20),
+          "Sina Finance"
+      ));
     }
   }
 }

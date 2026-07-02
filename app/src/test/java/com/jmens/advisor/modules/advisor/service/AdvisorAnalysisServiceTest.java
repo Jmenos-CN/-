@@ -7,9 +7,11 @@ import com.jmens.advisor.common.cache.InMemoryCacheClient;
 import com.jmens.advisor.common.cache.JsonCacheService;
 import com.jmens.advisor.modules.advisor.domain.ResearchReport;
 import com.jmens.advisor.modules.stock.domain.KLinePoint;
+import com.jmens.advisor.modules.stock.domain.StockNewsItem;
 import com.jmens.advisor.modules.stock.domain.StockQuote;
 import com.jmens.advisor.modules.stock.domain.StockSymbol;
 import com.jmens.advisor.modules.stock.service.StockDataPort;
+import com.jmens.advisor.modules.stock.service.StockNewsPort;
 import com.jmens.advisor.modules.stock.service.StockSymbolParser;
 import java.math.BigDecimal;
 import java.time.LocalDate;
@@ -22,12 +24,14 @@ class AdvisorAnalysisServiceTest {
   @Test
   void analyzesQueryByParsingSymbolFetchingQuoteAndRunningAgentsWithContext() {
     StockDataPort stockDataPort = new StubStockDataPort();
+    StockNewsPort stockNewsPort = new StubStockNewsPort();
     CapturingAdvisorReportService reportService = new CapturingAdvisorReportService();
     AdvisorWorkflowService workflowService = new AdvisorWorkflowService(List.of(
         context -> {
           assertThat(context).contains("600519", "贵州茅台", "1510.00", "1.34%");
           assertThat(context).contains("KLine summary", "latestClose=1193.01", "high=1210.00", "low=1166.33");
-          assertThat(context).contains("financial/news data not configured");
+          assertThat(context).contains("News summary", "贵州茅台新闻");
+          assertThat(context).contains("financial data not configured");
           return new SingleAgentAnalysis(AgentRole.FUNDAMENTAL, "基本面稳定");
         },
         context -> new SingleAgentAnalysis(AgentRole.RISK, "不存在确定性收益，需要关注波动风险")
@@ -35,6 +39,7 @@ class AdvisorAnalysisServiceTest {
     AdvisorAnalysisService service = new AdvisorAnalysisService(
         new StockSymbolParser(),
         stockDataPort,
+        stockNewsPort,
         workflowService,
         new ComplianceGuard(),
         reportService,
@@ -50,11 +55,11 @@ class AdvisorAnalysisServiceTest {
     assertThat(report.fundamentalView()).isEqualTo("基本面稳定");
     assertThat(report.riskView()).contains("波动风险");
     assertThat(report.conclusion()).contains("不构成投资建议");
-    assertThat(report.evidences()).singleElement()
-        .satisfies(evidence -> {
-          assertThat(evidence.source()).isEqualTo("Sina Finance");
-          assertThat(evidence.value()).contains("1510.00");
-        });
+    assertThat(report.evidences()).hasSize(2);
+    assertThat(report.evidences().get(0).source()).isEqualTo("Sina Finance");
+    assertThat(report.evidences().get(0).value()).contains("1510.00");
+    assertThat(report.evidences().get(1).source()).isEqualTo("Sina Finance News");
+    assertThat(report.evidences().get(1).title()).isEqualTo("贵州茅台新闻");
     assertThat(reportService.savedReport.stockCode()).isEqualTo("600519");
     assertThat(reportService.savedReport.conclusion()).contains("不构成投资建议");
   }
@@ -62,11 +67,13 @@ class AdvisorAnalysisServiceTest {
   @Test
   void returnsCachedReportForRepeatedRequestWithoutRunningExpensiveChainAgain() {
     CountingStockDataPort stockDataPort = new CountingStockDataPort();
+    CountingStockNewsPort stockNewsPort = new CountingStockNewsPort();
     CountingAdvisorReportService reportService = new CountingAdvisorReportService();
     CountingAgentRunner agentRunner = new CountingAgentRunner();
     AdvisorAnalysisService service = new AdvisorAnalysisService(
         new StockSymbolParser(),
         stockDataPort,
+        stockNewsPort,
         new AdvisorWorkflowService(List.of(agentRunner)),
         new ComplianceGuard(),
         reportService,
@@ -81,6 +88,7 @@ class AdvisorAnalysisServiceTest {
     assertThat(second.stockCode()).isEqualTo("600519");
     assertThat(stockDataPort.quoteCalls).isEqualTo(1);
     assertThat(stockDataPort.klineCalls).isEqualTo(1);
+    assertThat(stockNewsPort.calls).isEqualTo(1);
     assertThat(agentRunner.calls).isEqualTo(1);
     assertThat(reportService.saveCalls).isEqualTo(1);
   }
@@ -119,6 +127,17 @@ class AdvisorAnalysisServiceTest {
     public SingleAgentAnalysis run(String stockCode) {
       calls++;
       return new SingleAgentAnalysis(AgentRole.FUNDAMENTAL, "基本面稳定");
+    }
+  }
+
+  private static class CountingStockNewsPort extends StubStockNewsPort {
+
+    private int calls;
+
+    @Override
+    public List<StockNewsItem> getRecentNews(StockSymbol symbol, int limit) {
+      calls++;
+      return super.getRecentNews(symbol, limit);
     }
   }
 
@@ -176,6 +195,19 @@ class AdvisorAnalysisServiceTest {
               4247381L
           )
       );
+    }
+  }
+
+  private static class StubStockNewsPort implements StockNewsPort {
+
+    @Override
+    public List<StockNewsItem> getRecentNews(StockSymbol symbol, int limit) {
+      return List.of(new StockNewsItem(
+          "贵州茅台新闻",
+          "https://finance.sina.com.cn/news1.shtml",
+          LocalDateTime.of(2026, 7, 2, 17, 20),
+          "Sina Finance"
+      ));
     }
   }
 }

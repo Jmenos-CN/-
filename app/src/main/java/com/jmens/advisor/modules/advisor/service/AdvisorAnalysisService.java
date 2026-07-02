@@ -6,12 +6,15 @@ import com.jmens.advisor.common.cache.JsonCacheService;
 import com.jmens.advisor.modules.advisor.domain.DataEvidence;
 import com.jmens.advisor.modules.advisor.domain.ResearchReport;
 import com.jmens.advisor.modules.stock.domain.KLinePoint;
+import com.jmens.advisor.modules.stock.domain.StockNewsItem;
 import com.jmens.advisor.modules.stock.domain.StockQuote;
 import com.jmens.advisor.modules.stock.domain.StockSymbol;
 import com.jmens.advisor.modules.stock.service.StockDataPort;
+import com.jmens.advisor.modules.stock.service.StockNewsPort;
 import com.jmens.advisor.modules.stock.service.StockSymbolParser;
 import java.math.BigDecimal;
 import java.time.LocalDateTime;
+import java.util.ArrayList;
 import java.util.Comparator;
 import java.util.EnumMap;
 import java.util.List;
@@ -22,9 +25,11 @@ import org.springframework.stereotype.Service;
 public class AdvisorAnalysisService {
 
   private static final int KLINE_DAYS = 20;
+  private static final int NEWS_LIMIT = 5;
 
   private final StockSymbolParser stockSymbolParser;
   private final StockDataPort stockDataPort;
+  private final StockNewsPort stockNewsPort;
   private final AdvisorWorkflowService advisorWorkflowService;
   private final ComplianceGuard complianceGuard;
   private final AdvisorReportService advisorReportService;
@@ -34,6 +39,7 @@ public class AdvisorAnalysisService {
   public AdvisorAnalysisService(
       StockSymbolParser stockSymbolParser,
       StockDataPort stockDataPort,
+      StockNewsPort stockNewsPort,
       AdvisorWorkflowService advisorWorkflowService,
       ComplianceGuard complianceGuard,
       AdvisorReportService advisorReportService,
@@ -42,6 +48,7 @@ public class AdvisorAnalysisService {
   ) {
     this.stockSymbolParser = stockSymbolParser;
     this.stockDataPort = stockDataPort;
+    this.stockNewsPort = stockNewsPort;
     this.advisorWorkflowService = advisorWorkflowService;
     this.complianceGuard = complianceGuard;
     this.advisorReportService = advisorReportService;
@@ -66,8 +73,10 @@ public class AdvisorAnalysisService {
     }
     StockQuote quote = stockDataPort.getRealtimeQuote(symbol);
     List<KLinePoint> kLines = fetchKLines(symbol);
+    List<StockNewsItem> news = fetchNews(symbol);
     String kLineSummary = buildKLineSummary(kLines);
-    String agentContext = buildAgentContext(query, normalizedAnalysisType, quote, kLineSummary);
+    String newsSummary = buildNewsSummary(news);
+    String agentContext = buildAgentContext(query, normalizedAnalysisType, quote, kLineSummary, newsSummary);
     List<SingleAgentAnalysis> analyses = advisorWorkflowService.runAgents(agentContext);
     Map<AgentRole, String> byRole = toRoleMap(analyses);
     String quoteSummary = buildQuoteSummary(quote);
@@ -84,12 +93,7 @@ public class AdvisorAnalysisService {
         byRole.getOrDefault(AgentRole.NEWS, ""),
         byRole.getOrDefault(AgentRole.RISK, ""),
         conclusion,
-        List.of(new DataEvidence(
-            "Sina Finance",
-            quote.name() + " realtime quote",
-            quoteSummary,
-            quote.quoteTime()
-        ))
+        buildEvidences(quote, quoteSummary, news)
     );
     advisorReportService.save(report);
     cacheService.put(reportCacheKey, report, ttlProperties.report());
@@ -109,11 +113,21 @@ public class AdvisorAnalysisService {
     }
   }
 
+  private List<StockNewsItem> fetchNews(StockSymbol symbol) {
+    try {
+      return stockNewsPort.getRecentNews(symbol, NEWS_LIMIT);
+    } catch (RuntimeException ignored) {
+      // News is enrichment data; report generation should continue when the public page is unavailable.
+      return List.of();
+    }
+  }
+
   private String buildAgentContext(
       String query,
       String analysisType,
       StockQuote quote,
-      String kLineSummary
+      String kLineSummary,
+      String newsSummary
   ) {
     return """
         User query: %s
@@ -127,8 +141,9 @@ public class AdvisorAnalysisService {
         Amount: %s
         Quote time: %s
         %s
+        %s
 
-        financial/news data not configured: do not fabricate revenue, profit, valuation, policy, or news facts.
+        financial data not configured: do not fabricate revenue, profit, valuation, or policy facts.
         Please produce evidence-based research only. Do not output deterministic buy/sell instructions.
         """.formatted(
         query,
@@ -141,7 +156,8 @@ public class AdvisorAnalysisService {
         quote.volume(),
         quote.amount(),
         quote.quoteTime(),
-        kLineSummary
+        kLineSummary,
+        newsSummary
     );
   }
 
@@ -167,6 +183,39 @@ public class AdvisorAnalysisService {
             low,
             latest.volume()
         );
+  }
+
+  private String buildNewsSummary(List<StockNewsItem> news) {
+    if (news.isEmpty()) {
+      return "News summary: not available";
+    }
+    return "News summary:\n" + news.stream()
+        .map(item -> "- [%s] %s (%s)".formatted(item.publishedAt(), item.title(), item.url()))
+        .reduce((left, right) -> left + "\n" + right)
+        .orElse("");
+  }
+
+  private List<DataEvidence> buildEvidences(
+      StockQuote quote,
+      String quoteSummary,
+      List<StockNewsItem> news
+  ) {
+    List<DataEvidence> evidences = new ArrayList<>();
+    evidences.add(new DataEvidence(
+        "Sina Finance",
+        quote.name() + " realtime quote",
+        quoteSummary,
+        quote.quoteTime()
+    ));
+    for (StockNewsItem item : news) {
+      evidences.add(new DataEvidence(
+          "Sina Finance News",
+          item.title(),
+          item.url(),
+          item.publishedAt()
+      ));
+    }
+    return evidences;
   }
 
   private Map<AgentRole, String> toRoleMap(List<SingleAgentAnalysis> analyses) {
