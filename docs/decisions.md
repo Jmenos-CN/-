@@ -29,3 +29,14 @@ Reason:
 - LLM and external data calls are I/O-bound.
 - Virtual threads keep the implementation simple without early thread-pool tuning.
 - The design is easy to replace with Redis Stream async execution in a later milestone.
+
+## Disable External LLM Calls By Default
+
+Decision: register real LangChain4j Agent runners only when `advisor.llm.enabled=true`.
+
+Reason:
+
+- Unit tests and local startup should not require paid API credentials or network access.
+- The production path is still real: enabling the flag creates an OpenAI-compatible `ChatModel`
+  and wires five role-specific Agent runners.
+- Missing API keys fail fast with a clear configuration error instead of returning silent placeholder output.

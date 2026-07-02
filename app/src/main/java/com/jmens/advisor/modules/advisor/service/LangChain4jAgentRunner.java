@@ -2,6 +2,9 @@ package com.jmens.advisor.modules.advisor.service;
 
 import dev.langchain4j.model.chat.ChatModel;
 
+/**
+ * Executes one advisor role by injecting the prepared market context into a LangChain4j prompt.
+ */
 public class LangChain4jAgentRunner implements AdvisorWorkflowService.AgentRunner {
 
   private final AgentRole role;
@@ -15,8 +18,10 @@ public class LangChain4jAgentRunner implements AdvisorWorkflowService.AgentRunne
   }
 
   @Override
-  public SingleAgentAnalysis run(String stockCode) {
-    String prompt = promptTemplate.replace("{stockCode}", stockCode);
+  public SingleAgentAnalysis run(String agentContext) {
+    String prompt = promptTemplate
+        .replace("{context}", agentContext)
+        .replace("{stockCode}", agentContext);
     return new SingleAgentAnalysis(role, chatModel.chat(prompt));
   }
 }

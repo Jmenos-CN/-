@@ -15,7 +15,9 @@ Implemented scope:
 - Compliance guard for financial-risk wording.
 - Advisor analysis API now executes the first real chain:
   `StockSymbolParser -> SinaStockDataClient -> AdvisorWorkflowService -> ResearchReport`.
-- LangChain4j AgentRunner abstraction and five role-specific prompt templates.
+- LangChain4j AgentRunner abstraction, five role-specific prompt templates, and conditional Spring Bean wiring.
+- When `advisor.llm.enabled=true`, the API creates an OpenAI-compatible LangChain4j `ChatModel`,
+  registers five Agent runners, and fills the report sections through real LLM calls.
 
 Not implemented:
 
@@ -35,5 +37,6 @@ Known notes:
 - Local startup uses an H2 in-memory datasource by default because report persistence is not implemented yet.
   Switch `POSTGRES_URL`, `POSTGRES_USER`, `POSTGRES_PASSWORD`, and `POSTGRES_DRIVER` when enabling PostgreSQL persistence.
 - The current API returns a `ResearchReport` with quote summary, role-based Agent sections,
-  compliance-guarded conclusion, and data evidence. If no AgentRunner beans are configured,
-  the API still returns a quote-based report with empty Agent sections.
+  compliance-guarded conclusion, and data evidence.
+- LLM Agent wiring is disabled by default so local tests and startup do not require external API credentials.
+  Set `ADVISOR_LLM_ENABLED=true` and `ADVISOR_LLM_API_KEY` to enable real model-generated sections.

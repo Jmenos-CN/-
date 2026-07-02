@@ -3,6 +3,7 @@ package com.jmens.advisor.modules.advisor.service;
 import static org.assertj.core.api.Assertions.assertThat;
 import static org.mockito.ArgumentMatchers.contains;
 import static org.mockito.Mockito.mock;
+import static org.mockito.Mockito.verify;
 import static org.mockito.Mockito.when;
 
 import dev.langchain4j.model.chat.ChatModel;
@@ -24,5 +25,21 @@ class LangChain4jAgentRunnerTest {
 
     assertThat(analysis.role()).isEqualTo(AgentRole.FUNDAMENTAL);
     assertThat(analysis.content()).isEqualTo("基本面分析结果");
+  }
+
+  @Test
+  void injectsFullAgentContextIntoPromptTemplate() {
+    ChatModel chatModel = mock(ChatModel.class);
+    when(chatModel.chat(contains("用户问题: 帮我分析600519"))).thenReturn("上下文分析结果");
+    LangChain4jAgentRunner runner = new LangChain4jAgentRunner(
+        AgentRole.RISK,
+        chatModel,
+        "请基于以下上下文分析风险:\n{context}"
+    );
+
+    SingleAgentAnalysis analysis = runner.run("用户问题: 帮我分析600519\n最新价: 1510.00");
+
+    assertThat(analysis.content()).isEqualTo("上下文分析结果");
+    verify(chatModel).chat(contains("最新价: 1510.00"));
   }
 }

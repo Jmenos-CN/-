@@ -16,3 +16,12 @@ spring:
     hibernate:
       ddl-auto: none
     open-in-view: false
+
+advisor:
+  llm:
+    enabled: ${ADVISOR_LLM_ENABLED:false}
+    base-url: ${ADVISOR_LLM_BASE_URL:https://dashscope.aliyuncs.com/compatible-mode/v1}
+    api-key: ${ADVISOR_LLM_API_KEY:}
+    model-name: ${ADVISOR_LLM_MODEL:qwen-plus}
+    temperature: ${ADVISOR_LLM_TEMPERATURE:0.2}
+    timeout: ${ADVISOR_LLM_TIMEOUT:60s}
