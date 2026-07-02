@@ -20,6 +20,23 @@
 
 The first milestone starts with an H2 in-memory datasource by default. PostgreSQL environment variables are only required after persistence is implemented.
 
+## Start With Remote PostgreSQL
+
+Use this only when you want the Java advisor project to persist reports into the existing Ubuntu PostgreSQL instance:
+
+```powershell
+$env:SERVER_PORT="18080"
+$env:POSTGRES_URL="jdbc:postgresql://192.168.150.101:5432/jmenos_interview_guide"
+$env:POSTGRES_USER="postgres"
+$env:POSTGRES_PASSWORD="<postgres-password>"
+$env:POSTGRES_DRIVER="org.postgresql.Driver"
+$env:SPRING_JPA_HIBERNATE_DDL_AUTO="update"
+
+.\gradlew.bat :app:bootRun --console=plain
+```
+
+The project writes to `stock_advisor_report`. Do not use `create` against this shared database because it already contains AI interview platform tables.
+
 ## Enable Real LLM Agents
 
 By default, the backend only returns realtime quote data and empty Agent sections. Enable LangChain4j Agent calls with environment variables:
@@ -69,3 +86,21 @@ Expected response shape:
 ```
 
 The endpoint calls Sina Finance for realtime quote data. If the public Sina endpoint is unavailable, the API returns an error until a fallback data source is added.
+
+## Report History APIs
+
+```powershell
+Invoke-RestMethod -Uri "http://localhost:8080/api/advisor/reports?stockCode=600519" `
+  -Method Get
+```
+
+```powershell
+Invoke-RestMethod -Uri "http://localhost:8080/api/advisor/reports/1" `
+  -Method Get
+```
+
+Expected response:
+
+- `code` is `200`
+- `success` is `true`
+- list items include `id`, `stockCode`, `stockName`, `quoteSummary`, and `createdAt`

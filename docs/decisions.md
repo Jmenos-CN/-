@@ -40,3 +40,13 @@ Reason:
 - The production path is still real: enabling the flag creates an OpenAI-compatible `ChatModel`
   and wires five role-specific Agent runners.
 - Missing API keys fail fast with a clear configuration error instead of returning silent placeholder output.
+
+## Store Generated Reports As Snapshots
+
+Decision: persist generated advisor reports as immutable snapshots in `stock_advisor_report`.
+
+Reason:
+
+- LLM outputs and external market data can change over time, so each generated report should be auditable.
+- Snapshot storage supports history review without re-calling expensive LLM providers.
+- The table name is project-specific to avoid colliding with existing AI interview platform tables.

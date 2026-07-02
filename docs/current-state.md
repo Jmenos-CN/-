@@ -18,6 +18,8 @@ Implemented scope:
 - LangChain4j AgentRunner abstraction, five role-specific prompt templates, and conditional Spring Bean wiring.
 - When `advisor.llm.enabled=true`, the API creates an OpenAI-compatible LangChain4j `ChatModel`,
   registers five Agent runners, and fills the report sections through real LLM calls.
+- Generated advisor reports are persisted as snapshots in PostgreSQL table `stock_advisor_report`.
+- History APIs are available at `/api/advisor/reports/{id}` and `/api/advisor/reports?stockCode=...`.
 
 Not implemented:
 
@@ -25,7 +27,6 @@ Not implemented:
 - Real trading.
 - Portfolio rebalancing.
 - Paid data provider integration.
-- PostgreSQL report persistence.
 - Redis Stream async report generation.
 - React frontend.
 
@@ -40,3 +41,5 @@ Known notes:
   compliance-guarded conclusion, and data evidence.
 - LLM Agent wiring is disabled by default so local tests and startup do not require external API credentials.
   Set `ADVISOR_LLM_ENABLED=true` and `ADVISOR_LLM_API_KEY` to enable real model-generated sections.
+- Remote PostgreSQL `jmenos_interview_guide` is reachable at `192.168.150.101:5432` and already has pgvector enabled.
+  Use `SPRING_JPA_HIBERNATE_DDL_AUTO=update` only when intentionally creating or updating advisor tables.
