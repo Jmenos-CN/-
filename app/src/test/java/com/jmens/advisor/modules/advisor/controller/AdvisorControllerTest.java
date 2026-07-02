@@ -5,6 +5,9 @@ import static org.springframework.test.web.servlet.request.MockMvcRequestBuilder
 import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.jsonPath;
 import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.status;
 
+import com.jmens.advisor.common.cache.CacheTtlProperties;
+import com.jmens.advisor.common.cache.InMemoryCacheClient;
+import com.jmens.advisor.common.cache.JsonCacheService;
 import com.jmens.advisor.modules.advisor.domain.AdvisorReportSummary;
 import com.jmens.advisor.modules.advisor.domain.ResearchReport;
 import com.jmens.advisor.modules.advisor.domain.DataEvidence;
@@ -42,7 +45,9 @@ class AdvisorControllerTest {
         new StubStockDataPort(),
         workflowService,
         new ComplianceGuard(),
-        new CapturingAdvisorReportService()
+        new CapturingAdvisorReportService(),
+        new JsonCacheService(new InMemoryCacheClient()),
+        new CacheTtlProperties(null, null, null, null, null)
     );
     mockMvc = MockMvcBuilders.standaloneSetup(
         new AdvisorController(analysisService, new StubAdvisorReportService())

@@ -1,5 +1,8 @@
 package com.jmens.advisor.modules.advisor.service;
 
+import com.jmens.advisor.common.cache.CacheKey;
+import com.jmens.advisor.common.cache.CacheTtlProperties;
+import com.jmens.advisor.common.cache.JsonCacheService;
 import com.jmens.advisor.modules.advisor.domain.DataEvidence;
 import com.jmens.advisor.modules.advisor.domain.ResearchReport;
 import com.jmens.advisor.modules.stock.domain.StockQuote;
@@ -20,25 +23,37 @@ public class AdvisorAnalysisService {
   private final AdvisorWorkflowService advisorWorkflowService;
   private final ComplianceGuard complianceGuard;
   private final AdvisorReportService advisorReportService;
+  private final JsonCacheService cacheService;
+  private final CacheTtlProperties ttlProperties;
 
   public AdvisorAnalysisService(
       StockSymbolParser stockSymbolParser,
       StockDataPort stockDataPort,
       AdvisorWorkflowService advisorWorkflowService,
       ComplianceGuard complianceGuard,
-      AdvisorReportService advisorReportService
+      AdvisorReportService advisorReportService,
+      JsonCacheService cacheService,
+      CacheTtlProperties ttlProperties
   ) {
     this.stockSymbolParser = stockSymbolParser;
     this.stockDataPort = stockDataPort;
     this.advisorWorkflowService = advisorWorkflowService;
     this.complianceGuard = complianceGuard;
     this.advisorReportService = advisorReportService;
+    this.cacheService = cacheService;
+    this.ttlProperties = ttlProperties;
   }
 
   public ResearchReport analyze(String query, String analysisType) {
     StockSymbol symbol = stockSymbolParser.parse(query);
+    String normalizedAnalysisType = normalizeAnalysisType(analysisType);
+    String reportCacheKey = CacheKey.report(symbol.code(), normalizedAnalysisType);
+    var cachedReport = cacheService.get(reportCacheKey, ResearchReport.class);
+    if (cachedReport.isPresent()) {
+      return cachedReport.get();
+    }
     StockQuote quote = stockDataPort.getRealtimeQuote(symbol);
-    String agentContext = buildAgentContext(query, analysisType, quote);
+    String agentContext = buildAgentContext(query, normalizedAnalysisType, quote);
     List<SingleAgentAnalysis> analyses = advisorWorkflowService.runAgents(agentContext);
     Map<AgentRole, String> byRole = toRoleMap(analyses);
     String quoteSummary = buildQuoteSummary(quote);
@@ -63,7 +78,12 @@ public class AdvisorAnalysisService {
         ))
     );
     advisorReportService.save(report);
+    cacheService.put(reportCacheKey, report, ttlProperties.report());
     return report;
+  }
+
+  private String normalizeAnalysisType(String analysisType) {
+    return analysisType == null || analysisType.isBlank() ? "full" : analysisType;
   }
 
   private String buildAgentContext(String query, String analysisType, StockQuote quote) {
@@ -82,7 +102,7 @@ public class AdvisorAnalysisService {
         请基于上述真实行情上下文进行投研分析，禁止输出确定性买卖建议。
         """.formatted(
         query,
-        analysisType == null || analysisType.isBlank() ? "full" : analysisType,
+        analysisType,
         quote.code(),
         quote.name(),
         quote.latestPrice(),

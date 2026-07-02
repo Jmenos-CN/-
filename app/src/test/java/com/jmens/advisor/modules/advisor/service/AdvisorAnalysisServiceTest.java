@@ -2,6 +2,9 @@ package com.jmens.advisor.modules.advisor.service;
 
 import static org.assertj.core.api.Assertions.assertThat;
 
+import com.jmens.advisor.common.cache.CacheTtlProperties;
+import com.jmens.advisor.common.cache.InMemoryCacheClient;
+import com.jmens.advisor.common.cache.JsonCacheService;
 import com.jmens.advisor.modules.advisor.domain.ResearchReport;
 import com.jmens.advisor.modules.stock.domain.KLinePoint;
 import com.jmens.advisor.modules.stock.domain.StockQuote;
@@ -31,7 +34,9 @@ class AdvisorAnalysisServiceTest {
         stockDataPort,
         workflowService,
         new ComplianceGuard(),
-        reportService
+        reportService,
+        new JsonCacheService(new InMemoryCacheClient()),
+        new CacheTtlProperties(null, null, null, null, null)
     );
 
     ResearchReport report = service.analyze("帮我分析600519", "full");
@@ -51,6 +56,31 @@ class AdvisorAnalysisServiceTest {
     assertThat(reportService.savedReport.conclusion()).contains("不构成投资建议");
   }
 
+  @Test
+  void returnsCachedReportForRepeatedRequestWithoutRunningExpensiveChainAgain() {
+    CountingStockDataPort stockDataPort = new CountingStockDataPort();
+    CountingAdvisorReportService reportService = new CountingAdvisorReportService();
+    CountingAgentRunner agentRunner = new CountingAgentRunner();
+    AdvisorAnalysisService service = new AdvisorAnalysisService(
+        new StockSymbolParser(),
+        stockDataPort,
+        new AdvisorWorkflowService(List.of(agentRunner)),
+        new ComplianceGuard(),
+        reportService,
+        new JsonCacheService(new InMemoryCacheClient()),
+        new CacheTtlProperties(null, null, null, null, null)
+    );
+
+    ResearchReport first = service.analyze("帮我分析600519", "full");
+    ResearchReport second = service.analyze("600519", "full");
+
+    assertThat(first.stockCode()).isEqualTo("600519");
+    assertThat(second.stockCode()).isEqualTo("600519");
+    assertThat(stockDataPort.quoteCalls).isEqualTo(1);
+    assertThat(agentRunner.calls).isEqualTo(1);
+    assertThat(reportService.saveCalls).isEqualTo(1);
+  }
+
   private static class CapturingAdvisorReportService extends AdvisorReportService {
 
     private ResearchReport savedReport;
@@ -63,6 +93,39 @@ class AdvisorAnalysisServiceTest {
     public Long save(ResearchReport report) {
       this.savedReport = report;
       return 1L;
+    }
+  }
+
+  private static class CountingAdvisorReportService extends CapturingAdvisorReportService {
+
+    private int saveCalls;
+
+    @Override
+    public Long save(ResearchReport report) {
+      saveCalls++;
+      return super.save(report);
+    }
+  }
+
+  private static class CountingAgentRunner implements AdvisorWorkflowService.AgentRunner {
+
+    private int calls;
+
+    @Override
+    public SingleAgentAnalysis run(String stockCode) {
+      calls++;
+      return new SingleAgentAnalysis(AgentRole.FUNDAMENTAL, "基本面稳定");
+    }
+  }
+
+  private static class CountingStockDataPort extends StubStockDataPort {
+
+    private int quoteCalls;
+
+    @Override
+    public StockQuote getRealtimeQuote(StockSymbol symbol) {
+      quoteCalls++;
+      return super.getRealtimeQuote(symbol);
     }
   }
 
