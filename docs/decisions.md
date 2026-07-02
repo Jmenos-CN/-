@@ -72,3 +72,14 @@ Reason:
 - Publishing is delayed until after the database transaction commits, preventing workers from consuming a task before
   the `stock_advisor_task` row is visible.
 - Stream entries use `StringCodec` so task IDs stay plain strings and can be inspected or debugged with Redis tools.
+
+## Treat K-Line As Enrichment Data
+
+Decision: fetch recent daily K-line data from Sina and inject a compact summary into the Agent context.
+
+Reason:
+
+- K-line data improves technical-analysis context without requiring a paid provider.
+- The report should still work from realtime quote data if the public K-line endpoint is temporarily unstable.
+- Financial and news data are explicitly marked as not configured until stable providers are selected, preventing the
+  model from fabricating revenue, valuation, policy, or news facts.

@@ -9,6 +9,7 @@ Implemented scope:
 - Typed market data contracts.
 - Sina quote payload parser.
 - Sina realtime quote HTTP fetch through `StockDataPort`.
+- Sina daily K-line JSONP parser and recent K-line fetch through `StockDataPort#getRecentKLine`.
 - Cache key and TTL policy.
 - LangChain4j structured output invoker.
 - Parallel advisor workflow using virtual threads.
@@ -23,6 +24,9 @@ Implemented scope:
 - Optional Redis cache is available for Sina realtime quotes and repeated advisor reports.
 - When Redis cache is enabled, quote cache keys use `stock:quote:{code}` and report cache keys use
   `advisor:report:{code}:{analysisType}`.
+- K-line cache is available with key `stock:kline:{code}:{days}` and default TTL of 1 hour.
+- Advisor Agent context now includes a recent K-line summary. Financial and news data are explicitly marked
+  "not configured" so model prompts do not fabricate unavailable facts.
 - Redis Stream async analysis tasks are available:
   `POST /api/advisor/tasks` creates a task, `GET /api/advisor/tasks/{taskId}` reads task state.
 - Async task state is persisted in PostgreSQL table `stock_advisor_task`; Redis Stream key `advisor:tasks`
@@ -36,6 +40,8 @@ Not implemented:
 - Real trading.
 - Portfolio rebalancing.
 - Paid data provider integration.
+- Real financial indicator provider.
+- Real news provider and news ranking.
 - React frontend.
 
 Known notes:
@@ -54,3 +60,5 @@ Known notes:
 - Remote Redis `192.168.150.101:6379` is reachable and returns `PONG`; Redis cache can be enabled without changing code.
 - Redis Stream smoke test against remote PostgreSQL and Redis passed on 2026-07-02:
   a new advisor task moved from `PENDING` to `COMPLETED` and produced a report ID.
+- K-line data-source smoke test against remote PostgreSQL and Redis passed on 2026-07-02:
+  `/api/advisor/analyze` returned `code=200` for `600519` without K-line fetch errors.

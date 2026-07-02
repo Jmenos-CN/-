@@ -55,6 +55,7 @@ $env:APP_CACHE_TTL_REPORT="10m"
 Cache keys:
 
 - quote: `stock:quote:{code}`
+- kline: `stock:kline:{code}:{days}`
 - report: `advisor:report:{code}:{analysisType}`
 
 If Redis is unavailable, cache reads behave as misses and cache writes are ignored.
@@ -145,6 +146,29 @@ Expected response shape:
 ```
 
 The endpoint calls Sina Finance for realtime quote data. If the public Sina endpoint is unavailable, the API returns an error until a fallback data source is added.
+The endpoint also attempts to fetch recent daily K-line data from Sina. K-line failures are treated as enrichment-data
+misses, so quote-based analysis can still continue. Financial and news provider data are not configured in this slice;
+the Agent context explicitly tells the model not to fabricate those facts.
+
+## K-Line Smoke Test
+
+Use a fresh `analysisType` to bypass report cache and verify the K-line-enriched path:
+
+```powershell
+$analysisType = "kline-smoke-" + [DateTimeOffset]::Now.ToUnixTimeSeconds()
+$body = @{ query = "帮我分析600519"; analysisType = $analysisType } | ConvertTo-Json
+
+Invoke-RestMethod -Uri "http://localhost:8080/api/advisor/analyze" `
+  -Method Post `
+  -ContentType "application/json; charset=utf-8" `
+  -Body $body
+```
+
+Expected response:
+
+- `code` is `200`
+- `data.stockCode` is `600519`
+- application logs contain no `Sina kline request failed` error
 
 ## Report History APIs
 
