@@ -27,6 +27,16 @@ advisor:
     timeout: ${ADVISOR_LLM_TIMEOUT:60s}
 
 app:
+  advisor:
+    tasks:
+      stream:
+        name: ${APP_ADVISOR_TASK_STREAM_NAME:advisor:tasks}
+        group: ${APP_ADVISOR_TASK_STREAM_GROUP:advisor-task-workers}
+        consumer: ${APP_ADVISOR_TASK_STREAM_CONSUMER:local-consumer}
+        poll-timeout: ${APP_ADVISOR_TASK_STREAM_POLL_TIMEOUT:1s}
+      consumer:
+        enabled: ${APP_ADVISOR_TASKS_CONSUMER_ENABLED:false}
+        fixed-delay: ${APP_ADVISOR_TASKS_CONSUMER_FIXED_DELAY:1000}
   cache:
     redis:
       enabled: ${APP_CACHE_REDIS_ENABLED:false}
