@@ -10,6 +10,7 @@ import com.jmens.advisor.modules.stock.domain.StockQuote;
 import com.jmens.advisor.modules.stock.domain.StockSymbol;
 import java.math.BigDecimal;
 import java.time.Duration;
+import java.time.LocalDate;
 import java.time.LocalDateTime;
 import java.util.List;
 import org.junit.jupiter.api.Test;
@@ -33,9 +34,28 @@ class CachedStockDataPortTest {
     assertThat(delegate.quoteCalls).isEqualTo(1);
   }
 
+  @Test
+  void cachesRecentKLineByStockCodeAndDays() {
+    CountingStockDataPort delegate = new CountingStockDataPort();
+    CachedStockDataPort cachedPort = new CachedStockDataPort(
+        delegate,
+        new JsonCacheService(new InMemoryCacheClient()),
+        new CacheTtlProperties(null, Duration.ofHours(1), null, null, null)
+    );
+
+    List<KLinePoint> first = cachedPort.getRecentKLine(new StockSymbol("600519", "SH"), 5);
+    List<KLinePoint> second = cachedPort.getRecentKLine(new StockSymbol("600519", "SH"), 5);
+
+    assertThat(first).hasSize(1);
+    assertThat(second).hasSize(1);
+    assertThat(second.get(0).close()).isEqualByComparingTo("1201.00");
+    assertThat(delegate.klineCalls).isEqualTo(1);
+  }
+
   private static class CountingStockDataPort implements StockDataPort {
 
     private int quoteCalls;
+    private int klineCalls;
 
     @Override
     public StockQuote getRealtimeQuote(StockSymbol symbol) {
@@ -54,7 +74,15 @@ class CachedStockDataPortTest {
 
     @Override
     public List<KLinePoint> getRecentKLine(StockSymbol symbol, int days) {
-      return List.of();
+      klineCalls++;
+      return List.of(new KLinePoint(
+          LocalDate.of(2026, 7, 2),
+          new BigDecimal("1190.00"),
+          new BigDecimal("1201.00"),
+          new BigDecimal("1210.00"),
+          new BigDecimal("1188.00"),
+          10000L
+      ));
     }
   }
 }

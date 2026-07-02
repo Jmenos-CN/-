@@ -5,6 +5,7 @@ import com.fasterxml.jackson.databind.ObjectMapper;
 import com.fasterxml.jackson.databind.SerializationFeature;
 import com.fasterxml.jackson.datatype.jsr310.JavaTimeModule;
 import java.time.Duration;
+import java.util.List;
 import java.util.Optional;
 
 public class JsonCacheService {
@@ -22,6 +23,10 @@ public class JsonCacheService {
     return cacheClient.get(key).map(value -> read(key, value, valueType));
   }
 
+  public <T> Optional<List<T>> getList(String key, Class<T> elementType) {
+    return cacheClient.get(key).map(value -> readList(key, value, elementType));
+  }
+
   public void put(String key, Object value, Duration ttl) {
     try {
       cacheClient.put(key, objectMapper.writeValueAsString(value), ttl);
@@ -35,6 +40,17 @@ public class JsonCacheService {
       return objectMapper.readValue(value, valueType);
     } catch (JsonProcessingException exception) {
       throw new IllegalStateException("Failed to deserialize cache value: " + key, exception);
+    }
+  }
+
+  private <T> List<T> readList(String key, String value, Class<T> elementType) {
+    try {
+      return objectMapper.readValue(
+          value,
+          objectMapper.getTypeFactory().constructCollectionType(List.class, elementType)
+      );
+    } catch (JsonProcessingException exception) {
+      throw new IllegalStateException("Failed to deserialize cache list value: " + key, exception);
     }
   }
 }

@@ -55,6 +55,12 @@ public class CachedStockDataPort implements StockDataPort {
 
   @Override
   public List<KLinePoint> getRecentKLine(StockSymbol symbol, int days) {
-    return delegate.getRecentKLine(symbol, days);
+    String key = CacheKey.kline(symbol.code(), days);
+    return cacheService.getList(key, KLinePoint.class)
+        .orElseGet(() -> {
+          List<KLinePoint> points = delegate.getRecentKLine(symbol, days);
+          cacheService.put(key, points, ttlProperties.kline());
+          return points;
+        });
   }
 }
