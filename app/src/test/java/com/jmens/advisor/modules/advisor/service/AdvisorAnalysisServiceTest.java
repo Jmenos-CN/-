@@ -33,6 +33,7 @@ class AdvisorAnalysisServiceTest {
           assertThat(context).contains("KLine summary", "latestClose=1193.01", "high=1210.00", "low=1166.33");
           assertThat(context).contains("News summary", "Market Article");
           assertThat(context).contains("Financial summary", "eps=21.76", "roe=10.57", "debtRatio=12.12");
+          assertThat(context).contains("Valuation summary", "PE=69.39", "PB=6.98");
           assertThat(context).doesNotContain("financial data not configured");
           return new SingleAgentAnalysis(AgentRole.FUNDAMENTAL, "fundamental analysis");
         },
@@ -52,14 +53,19 @@ class AdvisorAnalysisServiceTest {
     assertThat(report.stockName()).isEqualTo("Kweichow Moutai");
     assertThat(report.quoteSummary()).contains("1510.00", "1.34");
     assertThat(report.fundamentalView()).isEqualTo("fundamental analysis");
+    assertThat(report.valuationView()).contains("Basic valuation", "PE=69.39", "PB=6.98");
     assertThat(report.riskView()).contains("risk analysis");
     assertThat(report.conclusion()).contains("fundamental analysis", "risk analysis");
-    assertThat(report.evidences()).hasSize(3);
+    assertThat(report.evidences()).hasSize(4);
     assertThat(report.evidences().get(0).source()).isEqualTo("Sina Finance");
     assertThat(report.evidences().get(1).source()).isEqualTo("Sina Finance News");
     assertThat(report.evidences()).anySatisfy(evidence -> {
       assertThat(evidence.source()).isEqualTo("Eastmoney Financial");
       assertThat(evidence.value()).contains("eps=21.76", "roe=10.57");
+    });
+    assertThat(report.evidences()).anySatisfy(evidence -> {
+      assertThat(evidence.source()).isEqualTo("Basic Valuation");
+      assertThat(evidence.value()).contains("PE=69.39", "PB=6.98", "ROE=10.57%");
     });
     assertThat(reportService.savedReport.stockCode()).isEqualTo("600519");
   }
@@ -133,6 +139,7 @@ class AdvisorAnalysisServiceTest {
         stockDataPort,
         stockNewsPort,
         stockFinancialPort,
+        new BasicValuationService(),
         workflowService,
         new ComplianceGuard(),
         reportService,

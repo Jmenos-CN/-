@@ -34,6 +34,7 @@ public class AdvisorAnalysisService {
   private final StockDataPort stockDataPort;
   private final StockNewsPort stockNewsPort;
   private final StockFinancialPort stockFinancialPort;
+  private final BasicValuationService basicValuationService;
   private final AdvisorWorkflowService advisorWorkflowService;
   private final ComplianceGuard complianceGuard;
   private final AdvisorReportService advisorReportService;
@@ -45,6 +46,7 @@ public class AdvisorAnalysisService {
       StockDataPort stockDataPort,
       StockNewsPort stockNewsPort,
       StockFinancialPort stockFinancialPort,
+      BasicValuationService basicValuationService,
       AdvisorWorkflowService advisorWorkflowService,
       ComplianceGuard complianceGuard,
       AdvisorReportService advisorReportService,
@@ -55,6 +57,7 @@ public class AdvisorAnalysisService {
     this.stockDataPort = stockDataPort;
     this.stockNewsPort = stockNewsPort;
     this.stockFinancialPort = stockFinancialPort;
+    this.basicValuationService = basicValuationService;
     this.advisorWorkflowService = advisorWorkflowService;
     this.complianceGuard = complianceGuard;
     this.advisorReportService = advisorReportService;
@@ -84,13 +87,16 @@ public class AdvisorAnalysisService {
     String kLineSummary = buildKLineSummary(kLines);
     String newsSummary = buildNewsSummary(news);
     String financialSummary = buildFinancialSummary(financial);
+    BasicValuationService.BasicValuation basicValuation = basicValuationService.evaluate(quote, financial);
+    String valuationSummary = buildValuationSummary(basicValuation);
     String agentContext = buildAgentContext(
         query,
         normalizedAnalysisType,
         quote,
         kLineSummary,
         newsSummary,
-        financialSummary
+        financialSummary,
+        valuationSummary
     );
     List<SingleAgentAnalysis> analyses = advisorWorkflowService.runAgents(agentContext);
     Map<AgentRole, String> byRole = toRoleMap(analyses);
@@ -104,11 +110,11 @@ public class AdvisorAnalysisService {
         quoteSummary,
         byRole.getOrDefault(AgentRole.FUNDAMENTAL, ""),
         byRole.getOrDefault(AgentRole.TECHNICAL, ""),
-        byRole.getOrDefault(AgentRole.VALUATION, ""),
+        valueOrFallback(byRole.get(AgentRole.VALUATION), basicValuation.text()),
         byRole.getOrDefault(AgentRole.NEWS, ""),
         byRole.getOrDefault(AgentRole.RISK, ""),
         conclusion,
-        buildEvidences(quote, quoteSummary, news, financial)
+        buildEvidences(quote, quoteSummary, news, financial, basicValuation)
     );
     advisorReportService.save(report);
     cacheService.put(reportCacheKey, report, ttlProperties.report());
@@ -152,7 +158,8 @@ public class AdvisorAnalysisService {
       StockQuote quote,
       String kLineSummary,
       String newsSummary,
-      String financialSummary
+      String financialSummary,
+      String valuationSummary
   ) {
     return """
         User query: %s
@@ -165,6 +172,7 @@ public class AdvisorAnalysisService {
         Volume: %d
         Amount: %s
         Quote time: %s
+        %s
         %s
         %s
         %s
@@ -184,7 +192,8 @@ public class AdvisorAnalysisService {
         quote.quoteTime(),
         kLineSummary,
         newsSummary,
-        financialSummary
+        financialSummary,
+        valuationSummary
     );
   }
 
@@ -265,6 +274,14 @@ public class AdvisorAnalysisService {
         );
   }
 
+  private String buildValuationSummary(BasicValuationService.BasicValuation valuation) {
+    return "Valuation summary: " + valuation.text();
+  }
+
+  private String valueOrFallback(String value, String fallback) {
+    return value == null || value.isBlank() ? fallback : value;
+  }
+
   private String format(BigDecimal value, int scale) {
     if (value == null) {
       return "n/a";
@@ -276,7 +293,8 @@ public class AdvisorAnalysisService {
       StockQuote quote,
       String quoteSummary,
       List<StockNewsItem> news,
-      StockFinancialSnapshot financial
+      StockFinancialSnapshot financial,
+      BasicValuationService.BasicValuation basicValuation
   ) {
     List<DataEvidence> evidences = new ArrayList<>();
     evidences.add(new DataEvidence(
@@ -299,6 +317,14 @@ public class AdvisorAnalysisService {
           financial.stockName() + " latest financial indicators",
           buildFinancialEvidenceValue(financial),
           financial.reportDate() == null ? LocalDateTime.now() : financial.reportDate().atStartOfDay()
+      ));
+    }
+    if (basicValuation != null && basicValuation.available()) {
+      evidences.add(new DataEvidence(
+          "Basic Valuation",
+          quote.name() + " PE/PB/ROE snapshot",
+          basicValuation.evidenceValue(),
+          quote.quoteTime()
       ));
     }
     return evidences;

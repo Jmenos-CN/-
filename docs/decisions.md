@@ -107,3 +107,14 @@ Reason:
   parent net profit, ROE, and debt ratio.
 - Financial metrics are cached for one day because they change far less frequently than quotes or news.
 - Financial failures degrade to an unavailable financial summary so quote, K-line, and news analysis can continue.
+
+## Keep Basic Valuation Deterministic And Non-Predictive
+
+Decision: compute a lightweight PE/PB/ROE valuation explanation from latest quote and latest financial indicators.
+
+Reason:
+
+- PE and PB are deterministic ratios from current price, EPS, and BPS, so they are easy to verify and explain.
+- ROE and debt ratio add profitability and balance-sheet context without introducing a forecasting model.
+- The service explicitly avoids target prices, future profit forecasts, and buy/sell instructions.
+- When LLM valuation output is disabled or empty, the deterministic explanation keeps `valuationView` useful.

@@ -138,7 +138,7 @@ Expected response shape:
     "quoteSummary": "最新价 ...",
     "fundamentalView": "LLM generated text when ADVISOR_LLM_ENABLED=true",
     "technicalView": "LLM generated text when ADVISOR_LLM_ENABLED=true",
-    "valuationView": "LLM generated text when ADVISOR_LLM_ENABLED=true",
+    "valuationView": "LLM generated text when ADVISOR_LLM_ENABLED=true, otherwise deterministic PE/PB/ROE explanation",
     "newsView": "LLM generated text when ADVISOR_LLM_ENABLED=true",
     "riskView": "LLM generated text when ADVISOR_LLM_ENABLED=true",
     "conclusion": "...不构成投资建议...",
@@ -153,6 +153,9 @@ indicators from Eastmoney Data Center. News items are deduplicated, ranked by pu
 best-effort article summary when Sina article pages are reachable. K-line, news-list, article-summary, and financial
 indicator failures are treated as enrichment-data misses, so quote-based analysis can still continue. When financial
 metrics are unavailable, the Agent context explicitly tells the model not to fabricate financial facts.
+When financial metrics are available, the backend also computes a deterministic basic valuation summary:
+`PE = latestPrice / EPS`, `PB = latestPrice / BPS`, plus ROE and debt-ratio context. This does not produce target prices,
+future profit forecasts, or buy/sell instructions.
 
 ## K-Line Smoke Test
 
@@ -175,6 +178,8 @@ Expected response:
 - application logs contain no `Sina kline request failed` error
 - response `data.evidences` includes one or more `Sina Finance News` entries when Sina news is reachable
 - response `data.evidences` includes one `Eastmoney Financial` entry when Eastmoney financial data are reachable
+- response `data.evidences` includes one `Basic Valuation` entry when quote and per-share financial metrics are reachable
+- response `data.valuationView` includes `PE=` when no LLM valuation Agent output is configured
 - Agent context includes news titles and article summaries when article pages are reachable
 - application logs contain no `Sina stock news request failed` error
 - application logs contain no `Eastmoney financial request failed` error

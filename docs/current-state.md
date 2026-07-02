@@ -13,6 +13,7 @@ Implemented scope:
 - Sina Finance stock news HTML parser and recent news fetch through `StockNewsPort`.
 - Sina news quality enhancement: duplicate filtering, publish-time ranking, and best-effort article summary extraction.
 - Eastmoney latest financial indicator JSON parser and recent financial snapshot fetch through `StockFinancialPort`.
+- Basic valuation explanation based on latest price, EPS, BPS, ROE, and debt ratio.
 - Cache key and TTL policy.
 - LangChain4j structured output invoker.
 - Parallel advisor workflow using virtual threads.
@@ -33,6 +34,8 @@ Implemented scope:
 - Advisor Agent context now includes recent K-line, stock-news titles, links, and article summaries when available.
   It also includes latest Eastmoney financial metrics when available. When financial data are unavailable, the prompt
   still explicitly tells the model not to fabricate revenue, profit, valuation, or policy facts.
+- Advisor Agent context now includes a deterministic `Valuation summary`; when no LLM valuation Agent output is
+  available, `valuationView` falls back to the basic PE/PB/ROE explanation.
 - Redis Stream async analysis tasks are available:
   `POST /api/advisor/tasks` creates a task, `GET /api/advisor/tasks/{taskId}` reads task state.
 - Async task state is persisted in PostgreSQL table `stock_advisor_task`; Redis Stream key `advisor:tasks`
@@ -75,3 +78,6 @@ Known notes:
 - Financial data-source smoke test against remote PostgreSQL and Redis passed on 2026-07-02:
   `/api/advisor/analyze` returned `code=200` for `600519`, included one `Eastmoney Financial` evidence item with
   EPS, BPS, revenue, parent net profit, ROE, and debt ratio, and logs contained no Eastmoney financial request failures.
+- Basic valuation smoke test against remote PostgreSQL and Redis passed on 2026-07-02:
+  `/api/advisor/analyze` returned `code=200` for `600519`, `valuationView` included PE, and evidence included one
+  `Basic Valuation` item with PE, PB, ROE, and debt ratio.

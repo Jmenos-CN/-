@@ -18,6 +18,7 @@ import com.jmens.advisor.modules.advisor.service.AdvisorReportService;
 import com.jmens.advisor.modules.advisor.service.AdvisorTaskService;
 import com.jmens.advisor.modules.advisor.service.AdvisorTaskStatus;
 import com.jmens.advisor.modules.advisor.service.AdvisorWorkflowService;
+import com.jmens.advisor.modules.advisor.service.BasicValuationService;
 import com.jmens.advisor.modules.advisor.service.ComplianceGuard;
 import com.jmens.advisor.modules.advisor.service.SingleAgentAnalysis;
 import com.jmens.advisor.modules.stock.domain.KLinePoint;
@@ -53,6 +54,7 @@ class AdvisorControllerTest {
         new StubStockDataPort(),
         new StubStockNewsPort(),
         new StubStockFinancialPort(),
+        new BasicValuationService(),
         workflowService,
         new ComplianceGuard(),
         new CapturingAdvisorReportService(),
