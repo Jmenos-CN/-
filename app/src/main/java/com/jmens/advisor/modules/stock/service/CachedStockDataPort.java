@@ -9,6 +9,7 @@ import com.jmens.advisor.modules.stock.domain.StockSymbol;
 import com.jmens.advisor.modules.stock.infrastructure.SinaStockDataClient;
 import java.util.List;
 import org.springframework.context.annotation.Primary;
+import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.stereotype.Service;
 
 /**
@@ -22,6 +23,7 @@ public class CachedStockDataPort implements StockDataPort {
   private final JsonCacheService cacheService;
   private final CacheTtlProperties ttlProperties;
 
+  @Autowired
   public CachedStockDataPort(
       SinaStockDataClient delegate,
       JsonCacheService cacheService,

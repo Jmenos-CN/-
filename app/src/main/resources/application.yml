@@ -14,7 +14,7 @@ spring:
       - org.redisson.spring.starter.RedissonAutoConfigurationV4
   jpa:
     hibernate:
-      ddl-auto: none
+      ddl-auto: ${SPRING_JPA_HIBERNATE_DDL_AUTO:update}
     open-in-view: false
 
 advisor:

@@ -50,3 +50,13 @@ Reason:
 - LLM outputs and external market data can change over time, so each generated report should be auditable.
 - Snapshot storage supports history review without re-calling expensive LLM providers.
 - The table name is project-specific to avoid colliding with existing AI interview platform tables.
+
+## Make Redis Cache Optional
+
+Decision: keep Redis disabled by default and enable it with `APP_CACHE_REDIS_ENABLED=true`.
+
+Reason:
+
+- Local tests and startup should continue without Redis.
+- Redis is an optimization layer; failures degrade to cache misses instead of breaking report generation.
+- Quote and report cache reduce repeated external data calls and repeated LLM/report work when infrastructure is available.

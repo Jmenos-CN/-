@@ -18,7 +18,7 @@
 .\gradlew.bat :app:bootRun --console=plain
 ```
 
-The first milestone starts with an H2 in-memory datasource by default. PostgreSQL environment variables are only required after persistence is implemented.
+Local startup uses an H2 in-memory datasource by default and creates advisor tables with `ddl-auto=update`.
 
 ## Start With Remote PostgreSQL
 
@@ -36,6 +36,28 @@ $env:SPRING_JPA_HIBERNATE_DDL_AUTO="update"
 ```
 
 The project writes to `stock_advisor_report`. Do not use `create` against this shared database because it already contains AI interview platform tables.
+
+## Enable Redis Cache
+
+Redis cache is optional. Enable it when the Ubuntu Redis instance is reachable:
+
+```powershell
+$env:APP_CACHE_REDIS_ENABLED="true"
+$env:REDIS_HOST="192.168.150.101"
+$env:REDIS_PORT="6379"
+$env:REDIS_DATABASE="0"
+$env:APP_CACHE_TTL_QUOTE="15s"
+$env:APP_CACHE_TTL_REPORT="10m"
+
+.\gradlew.bat :app:bootRun --console=plain
+```
+
+Cache keys:
+
+- quote: `stock:quote:{code}`
+- report: `advisor:report:{code}:{analysisType}`
+
+If Redis is unavailable, cache reads behave as misses and cache writes are ignored.
 
 ## Enable Real LLM Agents
 
