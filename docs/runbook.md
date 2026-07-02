@@ -59,6 +59,43 @@ Cache keys:
 
 If Redis is unavailable, cache reads behave as misses and cache writes are ignored.
 
+## Enable Async Advisor Tasks
+
+Async tasks reuse the same optional Redisson connection as the Redis cache. Start the backend with Redis enabled and
+turn on the task consumer:
+
+```powershell
+$env:APP_CACHE_REDIS_ENABLED="true"
+$env:REDIS_HOST="192.168.150.101"
+$env:REDIS_PORT="6379"
+$env:APP_ADVISOR_TASKS_CONSUMER_ENABLED="true"
+$env:APP_ADVISOR_TASKS_CONSUMER_FIXED_DELAY="500"
+$env:APP_ADVISOR_TASK_STREAM_NAME="advisor:tasks"
+$env:APP_ADVISOR_TASK_STREAM_GROUP="advisor-task-workers"
+$env:APP_ADVISOR_TASK_STREAM_CONSUMER="local-worker"
+
+.\gradlew.bat :app:bootRun --console=plain
+```
+
+Async task APIs:
+
+```powershell
+$task = Invoke-RestMethod -Uri "http://localhost:8080/api/advisor/tasks" `
+  -Method Post `
+  -ContentType "application/json; charset=utf-8" `
+  -Body '{"query":"帮我分析600519","analysisType":"full"}'
+
+Invoke-RestMethod -Uri "http://localhost:8080/api/advisor/tasks/$($task.data.taskId)" `
+  -Method Get
+```
+
+Expected status flow:
+
+- `PENDING`: task row created and stream message published after commit.
+- `PROCESSING`: worker has started the synchronous advisor analysis chain.
+- `COMPLETED`: report was generated; `reportId` points to `stock_advisor_report`.
+- `FAILED`: worker caught an exception and saved the error message.
+
 ## Enable Real LLM Agents
 
 By default, the backend only returns realtime quote data and empty Agent sections. Enable LangChain4j Agent calls with environment variables:

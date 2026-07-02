@@ -2,6 +2,7 @@ package com.jmens.advisor.modules.advisor.config;
 
 import static org.assertj.core.api.Assertions.assertThat;
 import static org.mockito.ArgumentMatchers.anyString;
+import static org.mockito.ArgumentMatchers.same;
 import static org.mockito.Mockito.mock;
 import static org.mockito.Mockito.when;
 
@@ -11,6 +12,7 @@ import com.jmens.advisor.modules.advisor.service.RedissonAdvisorTaskQueue;
 import org.junit.jupiter.api.Test;
 import org.redisson.api.RStream;
 import org.redisson.api.RedissonClient;
+import org.redisson.client.codec.StringCodec;
 import org.springframework.boot.test.context.runner.ApplicationContextRunner;
 
 class AdvisorTaskQueueConfigurationTest {
@@ -30,7 +32,8 @@ class AdvisorTaskQueueConfigurationTest {
   void registersRedissonQueueWhenRedissonClientExists() {
     RStream<String, String> stream = mock(RStream.class);
     RedissonClient redissonClient = mock(RedissonClient.class);
-    when(redissonClient.<String, String>getStream(anyString())).thenReturn(stream);
+    when(redissonClient.<String, String>getStream(anyString(), same(StringCodec.INSTANCE)))
+        .thenReturn(stream);
 
     contextRunner
         .withBean(RedissonClient.class, () -> redissonClient)

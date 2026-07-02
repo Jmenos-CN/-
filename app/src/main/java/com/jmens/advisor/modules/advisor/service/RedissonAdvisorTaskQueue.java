@@ -10,6 +10,7 @@ import org.redisson.api.stream.StreamAddArgs;
 import org.redisson.api.stream.StreamCreateGroupArgs;
 import org.redisson.api.stream.StreamMessageId;
 import org.redisson.api.stream.StreamReadGroupArgs;
+import org.redisson.client.codec.StringCodec;
 
 /**
  * Redis Stream implementation of advisor task delivery.
@@ -30,7 +31,7 @@ public class RedissonAdvisorTaskQueue implements AdvisorTaskQueue {
       RedissonClient redissonClient,
       AdvisorTaskStreamProperties properties
   ) {
-    this.stream = redissonClient.getStream(properties.name());
+    this.stream = redissonClient.getStream(properties.name(), StringCodec.INSTANCE);
     this.properties = properties;
     ensureConsumerGroup();
   }

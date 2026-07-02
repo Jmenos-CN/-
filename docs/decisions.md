@@ -60,3 +60,15 @@ Reason:
 - Local tests and startup should continue without Redis.
 - Redis is an optimization layer; failures degrade to cache misses instead of breaking report generation.
 - Quote and report cache reduce repeated external data calls and repeated LLM/report work when infrastructure is available.
+
+## Use Redis Stream For Async Analysis Delivery
+
+Decision: persist advisor task state in PostgreSQL and use Redis Stream only to deliver task IDs.
+
+Reason:
+
+- PostgreSQL remains the source of truth for task status, error message, and report ID.
+- Redis Stream is already available with the project infrastructure, so the async path does not add another broker.
+- Publishing is delayed until after the database transaction commits, preventing workers from consuming a task before
+  the `stock_advisor_task` row is visible.
+- Stream entries use `StringCodec` so task IDs stay plain strings and can be inspected or debugged with Redis tools.

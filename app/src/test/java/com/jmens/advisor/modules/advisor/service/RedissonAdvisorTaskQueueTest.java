@@ -16,6 +16,7 @@ import org.redisson.api.stream.StreamAddArgs;
 import org.redisson.api.stream.StreamCreateGroupArgs;
 import org.redisson.api.stream.StreamMessageId;
 import org.redisson.api.stream.StreamReadGroupArgs;
+import org.redisson.client.codec.StringCodec;
 
 class RedissonAdvisorTaskQueueTest {
 
@@ -23,7 +24,8 @@ class RedissonAdvisorTaskQueueTest {
   void publishesPollsAndAcknowledgesTaskMessages() {
     RedissonClient redissonClient = mock(RedissonClient.class);
     RStream<String, String> stream = mock(RStream.class);
-    when(redissonClient.<String, String>getStream("advisor:tasks")).thenReturn(stream);
+    when(redissonClient.<String, String>getStream("advisor:tasks", StringCodec.INSTANCE))
+        .thenReturn(stream);
 
     StreamMessageId messageId = new StreamMessageId(1700000000000L, 0L);
     when(stream.readGroup(

@@ -23,6 +23,12 @@ Implemented scope:
 - Optional Redis cache is available for Sina realtime quotes and repeated advisor reports.
 - When Redis cache is enabled, quote cache keys use `stock:quote:{code}` and report cache keys use
   `advisor:report:{code}:{analysisType}`.
+- Redis Stream async analysis tasks are available:
+  `POST /api/advisor/tasks` creates a task, `GET /api/advisor/tasks/{taskId}` reads task state.
+- Async task state is persisted in PostgreSQL table `stock_advisor_task`; Redis Stream key `advisor:tasks`
+  only carries task IDs.
+- Async consumer scheduling is disabled by default and can be enabled with
+  `APP_ADVISOR_TASKS_CONSUMER_ENABLED=true`.
 
 Not implemented:
 
@@ -30,7 +36,6 @@ Not implemented:
 - Real trading.
 - Portfolio rebalancing.
 - Paid data provider integration.
-- Redis Stream async report generation.
 - React frontend.
 
 Known notes:
@@ -47,3 +52,5 @@ Known notes:
 - Remote PostgreSQL `jmenos_interview_guide` is reachable at `192.168.150.101:5432` and already has pgvector enabled.
   Use `SPRING_JPA_HIBERNATE_DDL_AUTO=update` only when intentionally creating or updating advisor tables.
 - Remote Redis `192.168.150.101:6379` is reachable and returns `PONG`; Redis cache can be enabled without changing code.
+- Redis Stream smoke test against remote PostgreSQL and Redis passed on 2026-07-02:
+  a new advisor task moved from `PENDING` to `COMPLETED` and produced a report ID.

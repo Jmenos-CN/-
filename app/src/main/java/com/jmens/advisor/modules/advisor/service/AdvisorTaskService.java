@@ -6,6 +6,8 @@ import com.jmens.advisor.modules.advisor.persistence.AdvisorTaskRepository;
 import java.time.LocalDateTime;
 import java.util.UUID;
 import org.springframework.stereotype.Service;
+import org.springframework.transaction.support.TransactionSynchronization;
+import org.springframework.transaction.support.TransactionSynchronizationManager;
 import org.springframework.transaction.annotation.Transactional;
 
 /**
@@ -34,7 +36,7 @@ public class AdvisorTaskService {
     entity.setCreatedAt(now);
     entity.setUpdatedAt(now);
     AdvisorTaskEntity saved = repository.save(entity);
-    queue.publish(taskId);
+    publishAfterCommit(taskId);
     return toResponse(saved);
   }
 
@@ -94,5 +96,18 @@ public class AdvisorTaskService {
 
   private String normalizeAnalysisType(String analysisType) {
     return analysisType == null || analysisType.isBlank() ? "full" : analysisType;
+  }
+
+  private void publishAfterCommit(String taskId) {
+    if (!TransactionSynchronizationManager.isSynchronizationActive()) {
+      queue.publish(taskId);
+      return;
+    }
+    TransactionSynchronizationManager.registerSynchronization(new TransactionSynchronization() {
+      @Override
+      public void afterCommit() {
+        queue.publish(taskId);
+      }
+    });
   }
 }
