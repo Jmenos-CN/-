@@ -34,6 +34,24 @@ class StaticFrontendContractTest {
         .contains("/api/advisor/reports");
   }
 
+
+  @Test
+  void frontendContainsAsyncTaskFlowHooks() throws IOException {
+    String index = read("static/index.html");
+    String script = read("static/app.js");
+
+    assertThat(index)
+        .contains("task-card")
+        .contains("task-status")
+        .contains("task-id");
+    assertThat(script)
+        .contains("createAsyncTask")
+        .contains("pollTaskUntilDone")
+        .contains("loadCompletedReport")
+        .contains("/api/advisor/tasks")
+        .contains("/api/advisor/reports/");
+  }
+
   private String read(String path) throws IOException {
     return new String(new ClassPathResource(path).getInputStream().readAllBytes(), StandardCharsets.UTF_8);
   }

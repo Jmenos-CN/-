@@ -153,3 +153,13 @@ Reason:
 - Static resources are enough to validate the API contract, report quality badge, expandable insights, and history
   detail evidence chain.
 - The UI remains easy to replace with a full React frontend later because it only depends on stable REST endpoints.
+
+## Use Async Task APIs As The Primary Report UI Flow
+
+Decision: make the static report UI create advisor tasks and poll task status instead of calling the synchronous analyze endpoint directly.
+
+Reason:
+
+- The UI should demonstrate the full async delivery path that later maps to Redis Stream in production.
+- Long-running data and Agent calls no longer block the initial user action; the user sees task state while work continues.
+- The synchronous `/api/advisor/analyze` endpoint remains useful for API smoke tests and direct debugging.
