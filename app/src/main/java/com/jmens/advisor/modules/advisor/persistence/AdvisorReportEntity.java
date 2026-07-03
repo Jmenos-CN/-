@@ -58,6 +58,12 @@ public class AdvisorReportEntity {
   @Column(name = "evidences_json", nullable = false, columnDefinition = "text")
   private String evidencesJson;
 
+  @Column(name = "insights_json", nullable = false, columnDefinition = "text")
+  private String insightsJson;
+
+  @Column(name = "quality_json", nullable = false, columnDefinition = "text")
+  private String qualityJson;
+
   @Column(name = "created_at", nullable = false)
   private LocalDateTime createdAt;
 
@@ -155,6 +161,22 @@ public class AdvisorReportEntity {
 
   public void setEvidencesJson(String evidencesJson) {
     this.evidencesJson = evidencesJson;
+  }
+
+  public String getInsightsJson() {
+    return insightsJson;
+  }
+
+  public void setInsightsJson(String insightsJson) {
+    this.insightsJson = insightsJson;
+  }
+
+  public String getQualityJson() {
+    return qualityJson;
+  }
+
+  public void setQualityJson(String qualityJson) {
+    this.qualityJson = qualityJson;
   }
 
   public LocalDateTime getCreatedAt() {

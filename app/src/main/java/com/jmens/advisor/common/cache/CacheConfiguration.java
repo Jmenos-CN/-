@@ -18,6 +18,7 @@ public class CacheConfiguration {
 
   @Bean(destroyMethod = "shutdown")
   @ConditionalOnProperty(prefix = "app.cache.redis", name = "enabled", havingValue = "true")
+  @ConditionalOnMissingBean(RedissonClient.class)
   RedissonClient advisorRedissonClient(AdvisorRedisProperties properties) {
     Config config = new Config();
     config.useSingleServer()

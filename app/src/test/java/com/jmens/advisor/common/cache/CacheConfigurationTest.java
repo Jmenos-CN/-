@@ -1,6 +1,7 @@
 package com.jmens.advisor.common.cache;
 
 import static org.assertj.core.api.Assertions.assertThat;
+import static org.mockito.Mockito.mock;
 
 import org.junit.jupiter.api.Test;
 import org.redisson.api.RedissonClient;
@@ -24,6 +25,7 @@ class CacheConfigurationTest {
   @Test
   void registersRedissonCacheClientWhenRedisIsEnabled() {
     contextRunner
+        .withBean(RedissonClient.class, () -> mock(RedissonClient.class))
         .withPropertyValues(
             "app.cache.redis.enabled=true",
             "app.cache.redis.host=192.168.150.101",

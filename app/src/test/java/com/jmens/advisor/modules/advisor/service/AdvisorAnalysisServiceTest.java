@@ -72,6 +72,10 @@ class AdvisorAnalysisServiceTest {
       assertThat(evidence.source()).isEqualTo("Peer Comparison");
       assertThat(evidence.value()).contains("peerMedianPE=26.67", "peerMedianPB=4");
     });
+    assertThat(report.insights()).extracting(insight -> insight.type())
+        .containsExactly("MARKET", "NEWS", "FINANCIAL", "VALUATION", "PEER");
+    assertThat(report.quality().qualityScore()).isEqualTo(100);
+    assertThat(report.quality().missingEvidenceTypes()).isEmpty();
     assertThat(reportService.savedReport.stockCode()).isEqualTo("600519");
   }
 
@@ -157,6 +161,8 @@ class AdvisorAnalysisServiceTest {
             stockFinancialPort,
             basicValuationService
         ),
+        new ReportInsightService(),
+        new ReportQualityService(),
         workflowService,
         new ComplianceGuard(),
         reportService,

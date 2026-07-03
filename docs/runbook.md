@@ -142,7 +142,13 @@ Expected response shape:
     "newsView": "LLM generated text when ADVISOR_LLM_ENABLED=true",
     "riskView": "LLM generated text when ADVISOR_LLM_ENABLED=true",
     "conclusion": "...不构成投资建议...",
-    "evidences": []
+    "evidences": [],
+    "insights": [],
+    "quality": {
+      "qualityScore": 0,
+      "missingEvidenceTypes": [],
+      "warnings": []
+    }
   }
 }
 ```
@@ -158,6 +164,9 @@ When financial metrics are available, the backend also computes a deterministic 
 future profit forecasts, or buy/sell instructions.
 When the stock code is part of a configured peer group under `app.advisor.peer.groups`, the backend also fetches peer
 quotes and financial metrics, computes PE/PB/ROE medians, and appends a deterministic peer-comparison explanation.
+Generated reports also include deterministic explainability fields. `insights` maps evidence entries into stable
+MARKET/FINANCIAL/VALUATION/PEER/NEWS explanation categories, and `quality` reports evidence completeness plus
+missing-data warnings.
 
 Default peer groups:
 
@@ -167,7 +176,7 @@ Default peer groups:
 
 ## K-Line Smoke Test
 
-Use a fresh `analysisType` to bypass report cache and verify the K-line/news/financial enriched path:
+Use a fresh `analysisType` to bypass report cache and verify the K-line/news/financial/report-quality enriched path:
 
 ```powershell
 $analysisType = "news-smoke-" + [DateTimeOffset]::Now.ToUnixTimeSeconds()
@@ -188,6 +197,9 @@ Expected response:
 - response `data.evidences` includes one `Eastmoney Financial` entry when Eastmoney financial data are reachable
 - response `data.evidences` includes one `Basic Valuation` entry when quote and per-share financial metrics are reachable
 - response `data.evidences` includes one `Peer Comparison` entry when configured peers are reachable
+- response `data.insights` is non-empty when at least one known evidence source is available
+- response `data.quality.qualityScore` is at least `80` when quote, financial, valuation, peer, and news evidence are
+  all reachable except for transient public-source misses
 - response `data.valuationView` includes `PE=` when no LLM valuation Agent output is configured
 - response `data.valuationView` includes peer-comparison text when configured peers are reachable
 - Agent context includes news titles and article summaries when article pages are reachable

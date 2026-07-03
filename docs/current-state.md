@@ -39,6 +39,11 @@ Implemented scope:
   available, `valuationView` falls back to the basic PE/PB/ROE explanation.
 - Advisor Agent context now includes a deterministic `Peer comparison summary`; `valuationView` includes peer comparison
   when a configured peer group is available.
+- Generated reports now include deterministic explainability metadata:
+  `insights` maps evidence sources to MARKET/FINANCIAL/VALUATION/PEER/NEWS explanation items, and `quality` scores
+  evidence completeness from 0 to 100 with missing-data warnings.
+- Report snapshots persist `evidences_json`, `insights_json`, and `quality_json` so historical reports remain auditable
+  without re-running external data calls or LLM Agents.
 - Redis Stream async analysis tasks are available:
   `POST /api/advisor/tasks` creates a task, `GET /api/advisor/tasks/{taskId}` reads task state.
 - Async task state is persisted in PostgreSQL table `stock_advisor_task`; Redis Stream key `advisor:tasks`
@@ -58,6 +63,8 @@ Not implemented:
 Known notes:
 
 - Unit and MVC contract tests do not require a running Redis instance.
+- Cache configuration tests inject a mock `RedissonClient` when validating Redis-enabled wiring, so unit tests do not
+  depend on remote Redis connectivity.
 - Redisson auto-configuration stays excluded; the project creates its own optional Redisson client when
   `APP_CACHE_REDIS_ENABLED=true`.
 - Local startup uses an H2 in-memory datasource by default and `ddl-auto=update`, so advisor tables are created
@@ -87,3 +94,6 @@ Known notes:
 - Peer comparison smoke test against remote PostgreSQL and Redis passed on 2026-07-03:
   `/api/advisor/analyze` returned `code=200` for `600519`, `valuationView` included peer comparison, and evidence
   included one `Peer Comparison` item for the configured `liquor` peer group.
+- Report quality smoke test against local H2 startup passed on 2026-07-03:
+  `/api/advisor/analyze` returned `code=200` for `600519`, response included 9 evidence items, 9 insight items, and
+  `data.quality.qualityScore=100`.

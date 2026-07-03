@@ -6,6 +6,8 @@ import com.fasterxml.jackson.databind.SerializationFeature;
 import com.fasterxml.jackson.databind.ObjectMapper;
 import com.fasterxml.jackson.datatype.jsr310.JavaTimeModule;
 import com.jmens.advisor.modules.advisor.domain.DataEvidence;
+import com.jmens.advisor.modules.advisor.domain.ReportInsight;
+import com.jmens.advisor.modules.advisor.domain.ReportQuality;
 import com.jmens.advisor.modules.advisor.domain.ResearchReport;
 import com.jmens.advisor.modules.advisor.persistence.AdvisorReportEntity;
 import java.time.LocalDateTime;
@@ -35,6 +37,8 @@ public class AdvisorReportMapper {
     entity.setRiskView(report.riskView());
     entity.setConclusion(report.conclusion());
     entity.setEvidencesJson(writeEvidences(report.evidences()));
+    entity.setInsightsJson(writeInsights(report.insights()));
+    entity.setQualityJson(writeQuality(report.quality()));
     entity.setCreatedAt(LocalDateTime.now());
     return entity;
   }
@@ -51,7 +55,9 @@ public class AdvisorReportMapper {
         entity.getNewsView(),
         entity.getRiskView(),
         entity.getConclusion(),
-        readEvidences(entity.getEvidencesJson())
+        readEvidences(entity.getEvidencesJson()),
+        readInsights(entity.getInsightsJson()),
+        readQuality(entity.getQualityJson())
     );
   }
 
@@ -64,10 +70,51 @@ public class AdvisorReportMapper {
   }
 
   private List<DataEvidence> readEvidences(String evidencesJson) {
+    if (evidencesJson == null || evidencesJson.isBlank()) {
+      return List.of();
+    }
     try {
       return objectMapper.readValue(evidencesJson, new TypeReference<>() {});
     } catch (JsonProcessingException exception) {
       throw new IllegalStateException("Failed to deserialize advisor report evidences", exception);
+    }
+  }
+
+  private String writeInsights(List<ReportInsight> insights) {
+    try {
+      return objectMapper.writeValueAsString(insights);
+    } catch (JsonProcessingException exception) {
+      throw new IllegalStateException("Failed to serialize advisor report insights", exception);
+    }
+  }
+
+  private List<ReportInsight> readInsights(String insightsJson) {
+    if (insightsJson == null || insightsJson.isBlank()) {
+      return List.of();
+    }
+    try {
+      return objectMapper.readValue(insightsJson, new TypeReference<>() {});
+    } catch (JsonProcessingException exception) {
+      throw new IllegalStateException("Failed to deserialize advisor report insights", exception);
+    }
+  }
+
+  private String writeQuality(ReportQuality quality) {
+    try {
+      return objectMapper.writeValueAsString(quality == null ? ReportQuality.empty() : quality);
+    } catch (JsonProcessingException exception) {
+      throw new IllegalStateException("Failed to serialize advisor report quality", exception);
+    }
+  }
+
+  private ReportQuality readQuality(String qualityJson) {
+    if (qualityJson == null || qualityJson.isBlank()) {
+      return ReportQuality.empty();
+    }
+    try {
+      return objectMapper.readValue(qualityJson, ReportQuality.class);
+    } catch (JsonProcessingException exception) {
+      throw new IllegalStateException("Failed to deserialize advisor report quality", exception);
     }
   }
 }

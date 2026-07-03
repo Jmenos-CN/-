@@ -4,6 +4,8 @@ import com.jmens.advisor.common.cache.CacheKey;
 import com.jmens.advisor.common.cache.CacheTtlProperties;
 import com.jmens.advisor.common.cache.JsonCacheService;
 import com.jmens.advisor.modules.advisor.domain.DataEvidence;
+import com.jmens.advisor.modules.advisor.domain.ReportInsight;
+import com.jmens.advisor.modules.advisor.domain.ReportQuality;
 import com.jmens.advisor.modules.advisor.domain.ResearchReport;
 import com.jmens.advisor.modules.stock.domain.KLinePoint;
 import com.jmens.advisor.modules.stock.domain.StockFinancialSnapshot;
@@ -36,6 +38,8 @@ public class AdvisorAnalysisService {
   private final StockFinancialPort stockFinancialPort;
   private final BasicValuationService basicValuationService;
   private final PeerComparisonService peerComparisonService;
+  private final ReportInsightService reportInsightService;
+  private final ReportQualityService reportQualityService;
   private final AdvisorWorkflowService advisorWorkflowService;
   private final ComplianceGuard complianceGuard;
   private final AdvisorReportService advisorReportService;
@@ -49,6 +53,8 @@ public class AdvisorAnalysisService {
       StockFinancialPort stockFinancialPort,
       BasicValuationService basicValuationService,
       PeerComparisonService peerComparisonService,
+      ReportInsightService reportInsightService,
+      ReportQualityService reportQualityService,
       AdvisorWorkflowService advisorWorkflowService,
       ComplianceGuard complianceGuard,
       AdvisorReportService advisorReportService,
@@ -61,6 +67,8 @@ public class AdvisorAnalysisService {
     this.stockFinancialPort = stockFinancialPort;
     this.basicValuationService = basicValuationService;
     this.peerComparisonService = peerComparisonService;
+    this.reportInsightService = reportInsightService;
+    this.reportQualityService = reportQualityService;
     this.advisorWorkflowService = advisorWorkflowService;
     this.complianceGuard = complianceGuard;
     this.advisorReportService = advisorReportService;
@@ -108,6 +116,9 @@ public class AdvisorAnalysisService {
     Map<AgentRole, String> byRole = toRoleMap(analyses);
     String quoteSummary = buildQuoteSummary(quote);
     String conclusion = complianceGuard.sanitize(buildConclusion(quote, analyses));
+    List<DataEvidence> evidences = buildEvidences(quote, quoteSummary, news, financial, basicValuation, peerComparison);
+    List<ReportInsight> insights = reportInsightService.createInsights(evidences);
+    ReportQuality quality = reportQualityService.evaluate(evidences);
 
     ResearchReport report = new ResearchReport(
         quote.code(),
@@ -120,7 +131,9 @@ public class AdvisorAnalysisService {
         byRole.getOrDefault(AgentRole.NEWS, ""),
         byRole.getOrDefault(AgentRole.RISK, ""),
         conclusion,
-        buildEvidences(quote, quoteSummary, news, financial, basicValuation, peerComparison)
+        evidences,
+        insights,
+        quality
     );
     advisorReportService.save(report);
     cacheService.put(reportCacheKey, report, ttlProperties.report());

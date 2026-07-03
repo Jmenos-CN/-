@@ -22,6 +22,8 @@ import com.jmens.advisor.modules.advisor.service.BasicValuationService;
 import com.jmens.advisor.modules.advisor.service.ComplianceGuard;
 import com.jmens.advisor.modules.advisor.service.PeerComparisonService;
 import com.jmens.advisor.modules.advisor.service.PeerGroupService;
+import com.jmens.advisor.modules.advisor.service.ReportInsightService;
+import com.jmens.advisor.modules.advisor.service.ReportQualityService;
 import com.jmens.advisor.modules.advisor.service.SingleAgentAnalysis;
 import com.jmens.advisor.modules.stock.domain.KLinePoint;
 import com.jmens.advisor.modules.stock.domain.StockFinancialSnapshot;
@@ -64,6 +66,8 @@ class AdvisorControllerTest {
         stockFinancialPort,
         basicValuationService,
         new PeerComparisonService(peerGroupService, stockDataPort, stockFinancialPort, basicValuationService),
+        new ReportInsightService(),
+        new ReportQualityService(),
         workflowService,
         new ComplianceGuard(),
         new CapturingAdvisorReportService(),

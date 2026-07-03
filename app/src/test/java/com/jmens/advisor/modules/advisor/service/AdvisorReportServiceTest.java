@@ -4,7 +4,10 @@ import static org.assertj.core.api.Assertions.assertThat;
 
 import com.jmens.advisor.modules.advisor.domain.AdvisorReportSummary;
 import com.jmens.advisor.modules.advisor.domain.DataEvidence;
+import com.jmens.advisor.modules.advisor.domain.ReportInsight;
+import com.jmens.advisor.modules.advisor.domain.ReportQuality;
 import com.jmens.advisor.modules.advisor.domain.ResearchReport;
+import java.math.BigDecimal;
 import java.time.LocalDateTime;
 import java.util.List;
 import org.junit.jupiter.api.Test;
@@ -25,10 +28,14 @@ class AdvisorReportServiceTest {
 
     ResearchReport saved = reportService.getReport(id);
     assertThat(saved.stockCode()).isEqualTo("600519");
-    assertThat(saved.stockName()).isEqualTo("贵州茅台");
-    assertThat(saved.fundamentalView()).isEqualTo("基本面稳定");
+    assertThat(saved.stockName()).isEqualTo("Kweichow Moutai");
+    assertThat(saved.fundamentalView()).isEqualTo("Fundamentals are stable");
     assertThat(saved.evidences()).singleElement()
         .satisfies(evidence -> assertThat(evidence.source()).isEqualTo("Sina Finance"));
+    assertThat(saved.insights()).singleElement()
+        .satisfies(insight -> assertThat(insight.type()).isEqualTo("MARKET"));
+    assertThat(saved.quality().qualityScore()).isEqualTo(20);
+    assertThat(saved.quality().missingEvidenceTypes()).contains("FINANCIAL", "VALUATION", "PEER", "NEWS");
   }
 
   @Test
@@ -36,15 +43,15 @@ class AdvisorReportServiceTest {
     reportService.save(sampleReport());
     reportService.save(new ResearchReport(
         "000001",
-        "平安银行",
+        "Ping An Bank",
         LocalDateTime.of(2026, 7, 2, 11, 0),
-        "最新价 10.00，涨跌幅 0.10%",
-        "基本面正常",
-        "技术面震荡",
-        "估值中性",
-        "新闻数据暂缺",
-        "需关注波动风险，不构成投资建议",
-        "综合分析仅供投研参考，不构成投资建议。",
+        "Latest price 10.00, change 0.10%",
+        "Fundamentals are normal",
+        "Technical view is volatile",
+        "Valuation is neutral",
+        "News data unavailable",
+        "Pay attention to volatility risk; not investment advice",
+        "Research summary is for reference only and not investment advice.",
         List.of()
     ));
 
@@ -53,29 +60,42 @@ class AdvisorReportServiceTest {
     assertThat(reports).singleElement()
         .satisfies(summary -> {
           assertThat(summary.stockCode()).isEqualTo("600519");
-          assertThat(summary.stockName()).isEqualTo("贵州茅台");
-          assertThat(summary.quoteSummary()).contains("最新价 1200.00");
+          assertThat(summary.stockName()).isEqualTo("Kweichow Moutai");
+          assertThat(summary.quoteSummary()).contains("Latest price 1200.00");
         });
   }
 
   private ResearchReport sampleReport() {
     return new ResearchReport(
         "600519",
-        "贵州茅台",
+        "Kweichow Moutai",
         LocalDateTime.of(2026, 7, 2, 10, 0),
-        "最新价 1200.00，涨跌幅 0.50%",
-        "基本面稳定",
-        "技术面震荡",
-        "估值数据不足",
-        "新闻数据暂缺",
-        "需关注波动风险，不构成投资建议",
-        "综合分析仅供投研参考，不构成投资建议。",
+        "Latest price 1200.00, change 0.50%",
+        "Fundamentals are stable",
+        "Technical view is volatile",
+        "Valuation data is insufficient",
+        "News data unavailable",
+        "Pay attention to volatility risk; not investment advice",
+        "Research summary is for reference only and not investment advice.",
         List.of(new DataEvidence(
             "Sina Finance",
-            "贵州茅台实时行情",
-            "最新价 1200.00",
+            "Kweichow Moutai realtime quote",
+            "Latest price 1200.00",
             LocalDateTime.of(2026, 7, 2, 10, 0)
-        ))
+        )),
+        List.of(new ReportInsight(
+            "MARKET",
+            "Market quote evidence",
+            "Realtime quote data anchors the report to observable market movement.",
+            List.of("Kweichow Moutai realtime quote"),
+            "LOW",
+            new BigDecimal("0.90")
+        )),
+        new ReportQuality(
+            20,
+            List.of("FINANCIAL", "VALUATION", "PEER", "NEWS"),
+            List.of("Missing FINANCIAL evidence: financial indicators were unavailable.")
+        )
     );
   }
 }

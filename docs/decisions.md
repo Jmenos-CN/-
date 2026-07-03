@@ -129,3 +129,15 @@ Reason:
 - Static groups are deterministic, easy to test, and can be changed in `application.yml`.
 - The comparison reuses existing quote and financial ports, so no new market-data provider is introduced.
 - The service reports peer medians and relative labels only; it does not output target prices or buy/sell advice.
+
+## Score Report Quality From Evidence Completeness
+
+Decision: build report explainability and quality scoring from collected `DataEvidence` rather than asking the LLM to
+self-evaluate its own output.
+
+Reason:
+
+- Evidence completeness is deterministic and easy to test.
+- Missing quote, financial, valuation, peer, or news data should be visible to users instead of hidden inside prose.
+- The quality score helps frontend/report views distinguish fully supported reports from partially enriched reports.
+- The approach avoids extra LLM calls and prevents the model from inventing confidence justifications.
