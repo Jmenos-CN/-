@@ -156,6 +156,14 @@ metrics are unavailable, the Agent context explicitly tells the model not to fab
 When financial metrics are available, the backend also computes a deterministic basic valuation summary:
 `PE = latestPrice / EPS`, `PB = latestPrice / BPS`, plus ROE and debt-ratio context. This does not produce target prices,
 future profit forecasts, or buy/sell instructions.
+When the stock code is part of a configured peer group under `app.advisor.peer.groups`, the backend also fetches peer
+quotes and financial metrics, computes PE/PB/ROE medians, and appends a deterministic peer-comparison explanation.
+
+Default peer groups:
+
+- liquor: `600519`, `000858`, `000568`, `600809`
+- bank: `600036`, `601166`, `601398`, `601328`
+- securities: `600030`, `600837`, `601688`
 
 ## K-Line Smoke Test
 
@@ -179,7 +187,9 @@ Expected response:
 - response `data.evidences` includes one or more `Sina Finance News` entries when Sina news is reachable
 - response `data.evidences` includes one `Eastmoney Financial` entry when Eastmoney financial data are reachable
 - response `data.evidences` includes one `Basic Valuation` entry when quote and per-share financial metrics are reachable
+- response `data.evidences` includes one `Peer Comparison` entry when configured peers are reachable
 - response `data.valuationView` includes `PE=` when no LLM valuation Agent output is configured
+- response `data.valuationView` includes peer-comparison text when configured peers are reachable
 - Agent context includes news titles and article summaries when article pages are reachable
 - application logs contain no `Sina stock news request failed` error
 - application logs contain no `Eastmoney financial request failed` error

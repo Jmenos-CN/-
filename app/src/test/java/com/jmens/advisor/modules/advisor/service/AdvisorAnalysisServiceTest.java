@@ -34,6 +34,7 @@ class AdvisorAnalysisServiceTest {
           assertThat(context).contains("News summary", "Market Article");
           assertThat(context).contains("Financial summary", "eps=21.76", "roe=10.57", "debtRatio=12.12");
           assertThat(context).contains("Valuation summary", "PE=69.39", "PB=6.98");
+          assertThat(context).contains("Peer comparison summary", "peerMedianPE=26.67");
           assertThat(context).doesNotContain("financial data not configured");
           return new SingleAgentAnalysis(AgentRole.FUNDAMENTAL, "fundamental analysis");
         },
@@ -53,10 +54,10 @@ class AdvisorAnalysisServiceTest {
     assertThat(report.stockName()).isEqualTo("Kweichow Moutai");
     assertThat(report.quoteSummary()).contains("1510.00", "1.34");
     assertThat(report.fundamentalView()).isEqualTo("fundamental analysis");
-    assertThat(report.valuationView()).contains("Basic valuation", "PE=69.39", "PB=6.98");
+    assertThat(report.valuationView()).contains("Basic valuation", "PE=69.39", "PB=6.98", "Peer comparison");
     assertThat(report.riskView()).contains("risk analysis");
     assertThat(report.conclusion()).contains("fundamental analysis", "risk analysis");
-    assertThat(report.evidences()).hasSize(4);
+    assertThat(report.evidences()).hasSize(5);
     assertThat(report.evidences().get(0).source()).isEqualTo("Sina Finance");
     assertThat(report.evidences().get(1).source()).isEqualTo("Sina Finance News");
     assertThat(report.evidences()).anySatisfy(evidence -> {
@@ -66,6 +67,10 @@ class AdvisorAnalysisServiceTest {
     assertThat(report.evidences()).anySatisfy(evidence -> {
       assertThat(evidence.source()).isEqualTo("Basic Valuation");
       assertThat(evidence.value()).contains("PE=69.39", "PB=6.98", "ROE=10.57%");
+    });
+    assertThat(report.evidences()).anySatisfy(evidence -> {
+      assertThat(evidence.source()).isEqualTo("Peer Comparison");
+      assertThat(evidence.value()).contains("peerMedianPE=26.67", "peerMedianPB=4");
     });
     assertThat(reportService.savedReport.stockCode()).isEqualTo("600519");
   }
@@ -90,10 +95,10 @@ class AdvisorAnalysisServiceTest {
 
     assertThat(first.stockCode()).isEqualTo("600519");
     assertThat(second.stockCode()).isEqualTo("600519");
-    assertThat(stockDataPort.quoteCalls).isEqualTo(1);
+    assertThat(stockDataPort.quoteCalls).isEqualTo(4);
     assertThat(stockDataPort.klineCalls).isEqualTo(1);
     assertThat(stockNewsPort.calls).isEqualTo(1);
-    assertThat(stockFinancialPort.calls).isEqualTo(1);
+    assertThat(stockFinancialPort.calls).isEqualTo(4);
     assertThat(agentRunner.calls).isEqualTo(1);
     assertThat(reportService.saveCalls).isEqualTo(1);
   }
@@ -134,12 +139,24 @@ class AdvisorAnalysisServiceTest {
       AdvisorWorkflowService workflowService,
       AdvisorReportService reportService
   ) {
+    PeerGroupService peerGroupService = new PeerGroupService(
+        new com.jmens.advisor.modules.advisor.config.PeerGroupProperties(java.util.Map.of(
+            "liquor", List.of("600519", "000858", "000568", "600809")
+        ))
+    );
+    BasicValuationService basicValuationService = new BasicValuationService();
     return new AdvisorAnalysisService(
         new StockSymbolParser(),
         stockDataPort,
         stockNewsPort,
         stockFinancialPort,
-        new BasicValuationService(),
+        basicValuationService,
+        new PeerComparisonService(
+            peerGroupService,
+            stockDataPort,
+            stockFinancialPort,
+            basicValuationService
+        ),
         workflowService,
         new ComplianceGuard(),
         reportService,
@@ -229,10 +246,23 @@ class AdvisorAnalysisServiceTest {
 
     @Override
     public StockQuote getRealtimeQuote(StockSymbol symbol) {
+      if (symbol.code().equals("000858")) {
+        return quote(symbol, "120.00");
+      }
+      if (symbol.code().equals("000568")) {
+        return quote(symbol, "80.00");
+      }
+      if (symbol.code().equals("600809")) {
+        return quote(symbol, "90.00");
+      }
+      return quote(symbol, "1510.00");
+    }
+
+    private StockQuote quote(StockSymbol symbol, String latestPrice) {
       return new StockQuote(
           symbol.code(),
           "Kweichow Moutai",
-          new BigDecimal("1510.00"),
+          new BigDecimal(latestPrice),
           new BigDecimal("1490.00"),
           new BigDecimal("1.34"),
           123456L,
@@ -281,17 +311,36 @@ class AdvisorAnalysisServiceTest {
 
     @Override
     public StockFinancialSnapshot getLatestSnapshot(StockSymbol symbol) {
+      if (symbol.code().equals("000858")) {
+        return financial(symbol, "4.00", "30.00", "18.00", "20.00");
+      }
+      if (symbol.code().equals("000568")) {
+        return financial(symbol, "3.00", "20.00", "16.00", "25.00");
+      }
+      if (symbol.code().equals("600809")) {
+        return financial(symbol, "5.00", "22.50", "22.00", "18.00");
+      }
+      return financial(symbol, "21.76", "216.32234994607", "10.57", "12.1227489682");
+    }
+
+    private StockFinancialSnapshot financial(
+        StockSymbol symbol,
+        String eps,
+        String bps,
+        String roe,
+        String debtRatio
+    ) {
       return new StockFinancialSnapshot(
           symbol.code(),
           "Kweichow Moutai",
           LocalDate.of(2026, 3, 31),
           "Q1",
-          new BigDecimal("21.76"),
-          new BigDecimal("216.32234994607"),
+          new BigDecimal(eps),
+          new BigDecimal(bps),
           new BigDecimal("54702912385.23"),
           new BigDecimal("27242512886.45"),
-          new BigDecimal("10.57"),
-          new BigDecimal("12.1227489682")
+          new BigDecimal(roe),
+          new BigDecimal(debtRatio)
       );
     }
   }

@@ -35,6 +35,7 @@ public class AdvisorAnalysisService {
   private final StockNewsPort stockNewsPort;
   private final StockFinancialPort stockFinancialPort;
   private final BasicValuationService basicValuationService;
+  private final PeerComparisonService peerComparisonService;
   private final AdvisorWorkflowService advisorWorkflowService;
   private final ComplianceGuard complianceGuard;
   private final AdvisorReportService advisorReportService;
@@ -47,6 +48,7 @@ public class AdvisorAnalysisService {
       StockNewsPort stockNewsPort,
       StockFinancialPort stockFinancialPort,
       BasicValuationService basicValuationService,
+      PeerComparisonService peerComparisonService,
       AdvisorWorkflowService advisorWorkflowService,
       ComplianceGuard complianceGuard,
       AdvisorReportService advisorReportService,
@@ -58,6 +60,7 @@ public class AdvisorAnalysisService {
     this.stockNewsPort = stockNewsPort;
     this.stockFinancialPort = stockFinancialPort;
     this.basicValuationService = basicValuationService;
+    this.peerComparisonService = peerComparisonService;
     this.advisorWorkflowService = advisorWorkflowService;
     this.complianceGuard = complianceGuard;
     this.advisorReportService = advisorReportService;
@@ -89,6 +92,8 @@ public class AdvisorAnalysisService {
     String financialSummary = buildFinancialSummary(financial);
     BasicValuationService.BasicValuation basicValuation = basicValuationService.evaluate(quote, financial);
     String valuationSummary = buildValuationSummary(basicValuation);
+    PeerComparisonService.PeerComparison peerComparison = peerComparisonService.compare(symbol, quote, financial);
+    String peerComparisonSummary = buildPeerComparisonSummary(peerComparison);
     String agentContext = buildAgentContext(
         query,
         normalizedAnalysisType,
@@ -96,7 +101,8 @@ public class AdvisorAnalysisService {
         kLineSummary,
         newsSummary,
         financialSummary,
-        valuationSummary
+        valuationSummary,
+        peerComparisonSummary
     );
     List<SingleAgentAnalysis> analyses = advisorWorkflowService.runAgents(agentContext);
     Map<AgentRole, String> byRole = toRoleMap(analyses);
@@ -110,11 +116,11 @@ public class AdvisorAnalysisService {
         quoteSummary,
         byRole.getOrDefault(AgentRole.FUNDAMENTAL, ""),
         byRole.getOrDefault(AgentRole.TECHNICAL, ""),
-        valueOrFallback(byRole.get(AgentRole.VALUATION), basicValuation.text()),
+        valueOrFallback(byRole.get(AgentRole.VALUATION), buildFallbackValuationView(basicValuation, peerComparison)),
         byRole.getOrDefault(AgentRole.NEWS, ""),
         byRole.getOrDefault(AgentRole.RISK, ""),
         conclusion,
-        buildEvidences(quote, quoteSummary, news, financial, basicValuation)
+        buildEvidences(quote, quoteSummary, news, financial, basicValuation, peerComparison)
     );
     advisorReportService.save(report);
     cacheService.put(reportCacheKey, report, ttlProperties.report());
@@ -159,7 +165,8 @@ public class AdvisorAnalysisService {
       String kLineSummary,
       String newsSummary,
       String financialSummary,
-      String valuationSummary
+      String valuationSummary,
+      String peerComparisonSummary
   ) {
     return """
         User query: %s
@@ -172,6 +179,7 @@ public class AdvisorAnalysisService {
         Volume: %d
         Amount: %s
         Quote time: %s
+        %s
         %s
         %s
         %s
@@ -193,7 +201,8 @@ public class AdvisorAnalysisService {
         kLineSummary,
         newsSummary,
         financialSummary,
-        valuationSummary
+        valuationSummary,
+        peerComparisonSummary
     );
   }
 
@@ -278,6 +287,17 @@ public class AdvisorAnalysisService {
     return "Valuation summary: " + valuation.text();
   }
 
+  private String buildPeerComparisonSummary(PeerComparisonService.PeerComparison peerComparison) {
+    return "Peer comparison summary: " + peerComparison.text();
+  }
+
+  private String buildFallbackValuationView(
+      BasicValuationService.BasicValuation basicValuation,
+      PeerComparisonService.PeerComparison peerComparison
+  ) {
+    return basicValuation.text() + "\n" + peerComparison.text();
+  }
+
   private String valueOrFallback(String value, String fallback) {
     return value == null || value.isBlank() ? fallback : value;
   }
@@ -294,7 +314,8 @@ public class AdvisorAnalysisService {
       String quoteSummary,
       List<StockNewsItem> news,
       StockFinancialSnapshot financial,
-      BasicValuationService.BasicValuation basicValuation
+      BasicValuationService.BasicValuation basicValuation,
+      PeerComparisonService.PeerComparison peerComparison
   ) {
     List<DataEvidence> evidences = new ArrayList<>();
     evidences.add(new DataEvidence(
@@ -324,6 +345,14 @@ public class AdvisorAnalysisService {
           "Basic Valuation",
           quote.name() + " PE/PB/ROE snapshot",
           basicValuation.evidenceValue(),
+          quote.quoteTime()
+      ));
+    }
+    if (peerComparison != null && peerComparison.available()) {
+      evidences.add(new DataEvidence(
+          "Peer Comparison",
+          quote.name() + " peer valuation comparison",
+          peerComparison.evidenceValue(),
           quote.quoteTime()
       ));
     }

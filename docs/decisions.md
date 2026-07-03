@@ -118,3 +118,14 @@ Reason:
 - ROE and debt ratio add profitability and balance-sheet context without introducing a forecasting model.
 - The service explicitly avoids target prices, future profit forecasts, and buy/sell instructions.
 - When LLM valuation output is disabled or empty, the deterministic explanation keeps `valuationView` useful.
+
+## Use Configured Peer Groups For First Peer Comparison
+
+Decision: use static configured peer groups for the first industry/peer comparison slice.
+
+Reason:
+
+- Peer comparison makes PE/PB/ROE interpretation more useful without requiring automatic industry classification.
+- Static groups are deterministic, easy to test, and can be changed in `application.yml`.
+- The comparison reuses existing quote and financial ports, so no new market-data provider is introduced.
+- The service reports peer medians and relative labels only; it does not output target prices or buy/sell advice.

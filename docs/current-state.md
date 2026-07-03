@@ -14,6 +14,7 @@ Implemented scope:
 - Sina news quality enhancement: duplicate filtering, publish-time ranking, and best-effort article summary extraction.
 - Eastmoney latest financial indicator JSON parser and recent financial snapshot fetch through `StockFinancialPort`.
 - Basic valuation explanation based on latest price, EPS, BPS, ROE, and debt ratio.
+- Configured peer-group lookup and peer comparison based on PE, PB, and ROE medians.
 - Cache key and TTL policy.
 - LangChain4j structured output invoker.
 - Parallel advisor workflow using virtual threads.
@@ -36,6 +37,8 @@ Implemented scope:
   still explicitly tells the model not to fabricate revenue, profit, valuation, or policy facts.
 - Advisor Agent context now includes a deterministic `Valuation summary`; when no LLM valuation Agent output is
   available, `valuationView` falls back to the basic PE/PB/ROE explanation.
+- Advisor Agent context now includes a deterministic `Peer comparison summary`; `valuationView` includes peer comparison
+  when a configured peer group is available.
 - Redis Stream async analysis tasks are available:
   `POST /api/advisor/tasks` creates a task, `GET /api/advisor/tasks/{taskId}` reads task state.
 - Async task state is persisted in PostgreSQL table `stock_advisor_task`; Redis Stream key `advisor:tasks`
@@ -81,3 +84,6 @@ Known notes:
 - Basic valuation smoke test against remote PostgreSQL and Redis passed on 2026-07-02:
   `/api/advisor/analyze` returned `code=200` for `600519`, `valuationView` included PE, and evidence included one
   `Basic Valuation` item with PE, PB, ROE, and debt ratio.
+- Peer comparison smoke test against remote PostgreSQL and Redis passed on 2026-07-03:
+  `/api/advisor/analyze` returned `code=200` for `600519`, `valuationView` included peer comparison, and evidence
+  included one `Peer Comparison` item for the configured `liquor` peer group.

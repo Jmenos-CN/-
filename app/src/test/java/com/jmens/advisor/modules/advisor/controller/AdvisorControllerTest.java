@@ -20,6 +20,8 @@ import com.jmens.advisor.modules.advisor.service.AdvisorTaskStatus;
 import com.jmens.advisor.modules.advisor.service.AdvisorWorkflowService;
 import com.jmens.advisor.modules.advisor.service.BasicValuationService;
 import com.jmens.advisor.modules.advisor.service.ComplianceGuard;
+import com.jmens.advisor.modules.advisor.service.PeerComparisonService;
+import com.jmens.advisor.modules.advisor.service.PeerGroupService;
 import com.jmens.advisor.modules.advisor.service.SingleAgentAnalysis;
 import com.jmens.advisor.modules.stock.domain.KLinePoint;
 import com.jmens.advisor.modules.stock.domain.StockFinancialSnapshot;
@@ -49,12 +51,19 @@ class AdvisorControllerTest {
     AdvisorWorkflowService workflowService = new AdvisorWorkflowService(List.of(
         context -> new SingleAgentAnalysis(AgentRole.FUNDAMENTAL, "基本面稳定")
     ));
+    StubStockDataPort stockDataPort = new StubStockDataPort();
+    StubStockFinancialPort stockFinancialPort = new StubStockFinancialPort();
+    BasicValuationService basicValuationService = new BasicValuationService();
+    PeerGroupService peerGroupService = new PeerGroupService(
+        new com.jmens.advisor.modules.advisor.config.PeerGroupProperties(java.util.Map.of())
+    );
     AdvisorAnalysisService analysisService = new AdvisorAnalysisService(
         new StockSymbolParser(),
-        new StubStockDataPort(),
+        stockDataPort,
         new StubStockNewsPort(),
-        new StubStockFinancialPort(),
-        new BasicValuationService(),
+        stockFinancialPort,
+        basicValuationService,
+        new PeerComparisonService(peerGroupService, stockDataPort, stockFinancialPort, basicValuationService),
         workflowService,
         new ComplianceGuard(),
         new CapturingAdvisorReportService(),

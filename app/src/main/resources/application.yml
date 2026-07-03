@@ -28,6 +28,22 @@ advisor:
 
 app:
   advisor:
+    peer:
+      groups:
+        liquor:
+          - "600519"
+          - "000858"
+          - "000568"
+          - "600809"
+        bank:
+          - "600036"
+          - "601166"
+          - "601398"
+          - "601328"
+        securities:
+          - "600030"
+          - "600837"
+          - "601688"
     tasks:
       stream:
         name: ${APP_ADVISOR_TASK_STREAM_NAME:advisor:tasks}
