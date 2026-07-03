@@ -88,6 +88,6 @@ Open `http://localhost:18080/`, generate a report, confirm quality badge, expand
 
 ### Task 4: Commit And Push
 
-- [ ] **Step 1: Stage implementation**
-- [ ] **Step 2: Commit as `feat: add explainable report ui`**
-- [ ] **Step 3: Push current branch**
+- [x] **Step 1: Stage implementation**
+- [x] **Step 2: Commit as `feat: add explainable report ui`**
+- [x] **Step 3: Push current branch**
