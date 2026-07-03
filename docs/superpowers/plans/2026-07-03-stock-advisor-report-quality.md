@@ -102,6 +102,6 @@ Expected: BUILD SUCCESSFUL.
 
 Start the backend with local/remote environment variables, call `/api/advisor/analyze`, and verify the JSON response contains non-empty `insights` and `quality`.
 
-- [ ] **Step 4: Commit and push**
+- [x] **Step 4: Commit and push**
 
 Commit as `feat: add report quality insights` and push the current branch.
