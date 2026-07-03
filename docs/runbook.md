@@ -19,6 +19,7 @@
 ```
 
 Local startup uses an H2 in-memory datasource by default and creates advisor tables with `ddl-auto=update`.
+After startup, open `http://localhost:8080/` to use the lightweight static report UI.
 
 ## Start With Remote PostgreSQL
 
@@ -174,6 +175,28 @@ Default peer groups:
 - bank: `600036`, `601166`, `601398`, `601328`
 - securities: `600030`, `600837`, `601688`
 
+## Static Report UI
+
+The backend serves a lightweight static frontend from `app/src/main/resources/static`.
+
+```powershell
+.\gradlew.bat :app:bootRun --console=plain
+```
+
+Open:
+
+```text
+http://localhost:8080/
+```
+
+Manual UI smoke checks:
+
+- Submit `Analyze 600519`.
+- Confirm the report panel renders a quality card with `qualityScore`.
+- Expand the first insight and verify it shows type, risk level, confidence, and supporting evidence.
+- Verify the evidence chain lists source, title, value, and fetched time.
+- Search history for `600519`, click a history item, and confirm detail view still shows quality, insights, and evidence.
+
 ## K-Line Smoke Test
 
 Use a fresh `analysisType` to bypass report cache and verify the K-line/news/financial/report-quality enriched path:
@@ -223,3 +246,4 @@ Expected response:
 - `code` is `200`
 - `success` is `true`
 - list items include `id`, `stockCode`, `stockName`, `quoteSummary`, and `createdAt`
+- detail responses include `quality`, `insights`, and `evidences` for the static report UI.

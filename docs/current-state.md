@@ -44,6 +44,8 @@ Implemented scope:
   evidence completeness from 0 to 100 with missing-data warnings.
 - Report snapshots persist `evidences_json`, `insights_json`, and `quality_json` so historical reports remain auditable
   without re-running external data calls or LLM Agents.
+- A lightweight Spring Boot static report UI is available at `/`. It can generate reports, query report history,
+  display `qualityScore` as a quality prompt, expand `insights`, and render the historical report evidence chain.
 - Redis Stream async analysis tasks are available:
   `POST /api/advisor/tasks` creates a task, `GET /api/advisor/tasks/{taskId}` reads task state.
 - Async task state is persisted in PostgreSQL table `stock_advisor_task`; Redis Stream key `advisor:tasks`
@@ -58,7 +60,7 @@ Not implemented:
 - Portfolio rebalancing.
 - Paid data provider integration.
 - Secondary news provider integration.
-- React frontend.
+- Full independent React frontend.
 
 Known notes:
 
@@ -97,3 +99,6 @@ Known notes:
 - Report quality smoke test against local H2 startup passed on 2026-07-03:
   `/api/advisor/analyze` returned `code=200` for `600519`, response included 9 evidence items, 9 insight items, and
   `data.quality.qualityScore=100`.
+- Report UI browser smoke test against local H2 startup passed on 2026-07-03:
+  opened `/`, generated `Analyze 600519`, verified the quality card, 9 expandable insights, history list, and 9 evidence
+  items in historical report detail.

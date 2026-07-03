@@ -141,3 +141,15 @@ Reason:
 - Missing quote, financial, valuation, peer, or news data should be visible to users instead of hidden inside prose.
 - The quality score helps frontend/report views distinguish fully supported reports from partially enriched reports.
 - The approach avoids extra LLM calls and prevents the model from inventing confidence justifications.
+
+## Start Report UI As Spring Boot Static Resources
+
+Decision: implement the first report UI as static `index.html`, `styles.css`, and `app.js` served by Spring Boot.
+
+Reason:
+
+- The project did not yet contain a frontend build pipeline, so adding React/Vite immediately would expand the
+  engineering surface beyond the current explainability goal.
+- Static resources are enough to validate the API contract, report quality badge, expandable insights, and history
+  detail evidence chain.
+- The UI remains easy to replace with a full React frontend later because it only depends on stable REST endpoints.

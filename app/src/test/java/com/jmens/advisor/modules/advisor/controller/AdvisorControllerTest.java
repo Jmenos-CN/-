@@ -1,23 +1,26 @@
 package com.jmens.advisor.modules.advisor.controller;
 
-import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.post;
 import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.get;
+import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.post;
 import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.jsonPath;
 import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.status;
 
 import com.jmens.advisor.common.cache.CacheTtlProperties;
 import com.jmens.advisor.common.cache.InMemoryCacheClient;
 import com.jmens.advisor.common.cache.JsonCacheService;
+import com.jmens.advisor.modules.advisor.config.PeerGroupProperties;
 import com.jmens.advisor.modules.advisor.domain.AdvisorReportSummary;
 import com.jmens.advisor.modules.advisor.domain.AdvisorTaskResponse;
-import com.jmens.advisor.modules.advisor.domain.ResearchReport;
 import com.jmens.advisor.modules.advisor.domain.DataEvidence;
+import com.jmens.advisor.modules.advisor.domain.ReportInsight;
+import com.jmens.advisor.modules.advisor.domain.ReportQuality;
+import com.jmens.advisor.modules.advisor.domain.ResearchReport;
 import com.jmens.advisor.modules.advisor.service.AdvisorAnalysisService;
-import com.jmens.advisor.modules.advisor.service.AgentRole;
 import com.jmens.advisor.modules.advisor.service.AdvisorReportService;
 import com.jmens.advisor.modules.advisor.service.AdvisorTaskService;
 import com.jmens.advisor.modules.advisor.service.AdvisorTaskStatus;
 import com.jmens.advisor.modules.advisor.service.AdvisorWorkflowService;
+import com.jmens.advisor.modules.advisor.service.AgentRole;
 import com.jmens.advisor.modules.advisor.service.BasicValuationService;
 import com.jmens.advisor.modules.advisor.service.ComplianceGuard;
 import com.jmens.advisor.modules.advisor.service.PeerComparisonService;
@@ -38,6 +41,8 @@ import java.math.BigDecimal;
 import java.time.LocalDate;
 import java.time.LocalDateTime;
 import java.util.List;
+import java.util.Map;
+import org.hamcrest.Matchers;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
 import org.springframework.http.MediaType;
@@ -51,14 +56,12 @@ class AdvisorControllerTest {
   @BeforeEach
   void setUp() {
     AdvisorWorkflowService workflowService = new AdvisorWorkflowService(List.of(
-        context -> new SingleAgentAnalysis(AgentRole.FUNDAMENTAL, "基本面稳定")
+        context -> new SingleAgentAnalysis(AgentRole.FUNDAMENTAL, "Fundamentals are stable")
     ));
     StubStockDataPort stockDataPort = new StubStockDataPort();
     StubStockFinancialPort stockFinancialPort = new StubStockFinancialPort();
     BasicValuationService basicValuationService = new BasicValuationService();
-    PeerGroupService peerGroupService = new PeerGroupService(
-        new com.jmens.advisor.modules.advisor.config.PeerGroupProperties(java.util.Map.of())
-    );
+    PeerGroupService peerGroupService = new PeerGroupService(new PeerGroupProperties(Map.of()));
     AdvisorAnalysisService analysisService = new AdvisorAnalysisService(
         new StockSymbolParser(),
         stockDataPort,
@@ -80,26 +83,34 @@ class AdvisorControllerTest {
   }
 
   @Test
-  void analyzeReturnsSuccess() throws Exception {
+  void analyzeReturnsQualityInsightsAndEvidenceContract() throws Exception {
     mockMvc.perform(post("/api/advisor/analyze")
             .contentType(MediaType.APPLICATION_JSON)
-            .content("{\"query\":\"帮我分析600519\",\"analysisType\":\"full\"}"))
+            .content("{\"query\":\"Analyze 600519\",\"analysisType\":\"full\"}"))
         .andExpect(status().isOk())
         .andExpect(jsonPath("$.code").value(200))
         .andExpect(jsonPath("$.success").value(true))
         .andExpect(jsonPath("$.data.stockCode").value("600519"))
-        .andExpect(jsonPath("$.data.stockName").value("贵州茅台"))
+        .andExpect(jsonPath("$.data.stockName").value("Kweichow Moutai"))
         .andExpect(jsonPath("$.data.quoteSummary").isNotEmpty())
-        .andExpect(jsonPath("$.data.conclusion").value(org.hamcrest.Matchers.containsString("不构成投资建议")));
+        .andExpect(jsonPath("$.data.quality.qualityScore").value(80))
+        .andExpect(jsonPath("$.data.quality.missingEvidenceTypes[0]").value("PEER"))
+        .andExpect(jsonPath("$.data.insights[0].type").value("MARKET"))
+        .andExpect(jsonPath("$.data.insights[0].supportingEvidence[0]").isNotEmpty())
+        .andExpect(jsonPath("$.data.evidences[0].source").value("Sina Finance"))
+        .andExpect(jsonPath("$.data.conclusion").value(Matchers.containsString("Fundamentals are stable")));
   }
 
   @Test
-  void returnsReportDetailById() throws Exception {
+  void returnsReportDetailWithExplainabilityFieldsById() throws Exception {
     mockMvc.perform(get("/api/advisor/reports/1"))
         .andExpect(status().isOk())
         .andExpect(jsonPath("$.success").value(true))
         .andExpect(jsonPath("$.data.stockCode").value("600519"))
-        .andExpect(jsonPath("$.data.stockName").value("贵州茅台"));
+        .andExpect(jsonPath("$.data.stockName").value("Kweichow Moutai"))
+        .andExpect(jsonPath("$.data.quality.qualityScore").value(20))
+        .andExpect(jsonPath("$.data.insights[0].type").value("MARKET"))
+        .andExpect(jsonPath("$.data.evidences[0].source").value("Sina Finance"));
   }
 
   @Test
@@ -115,7 +126,7 @@ class AdvisorControllerTest {
   void createsAsyncAnalysisTask() throws Exception {
     mockMvc.perform(post("/api/advisor/tasks")
             .contentType(MediaType.APPLICATION_JSON)
-            .content("{\"query\":\"帮我分析600519\",\"analysisType\":\"full\"}"))
+            .content("{\"query\":\"Analyze 600519\",\"analysisType\":\"full\"}"))
         .andExpect(status().isOk())
         .andExpect(jsonPath("$.success").value(true))
         .andExpect(jsonPath("$.data.taskId").value("task-1"))
@@ -160,8 +171,8 @@ class AdvisorControllerTest {
       return List.of(new AdvisorReportSummary(
           1L,
           stockCode,
-          "贵州茅台",
-          "最新价 1510.00，涨跌幅 1.34%",
+          "Kweichow Moutai",
+          "Latest price 1510.00, change 1.34%",
           LocalDateTime.of(2026, 7, 1, 10, 30)
       ));
     }
@@ -169,21 +180,34 @@ class AdvisorControllerTest {
     private ResearchReport sampleReport() {
       return new ResearchReport(
           "600519",
-          "贵州茅台",
+          "Kweichow Moutai",
           LocalDateTime.of(2026, 7, 1, 10, 30),
-          "最新价 1510.00，涨跌幅 1.34%",
-          "基本面稳定",
-          "技术面震荡",
-          "估值数据不足",
-          "新闻数据暂缺",
-          "需关注波动风险，不构成投资建议",
-          "综合分析仅供投研参考，不构成投资建议。",
+          "Latest price 1510.00, change 1.34%",
+          "Fundamentals are stable",
+          "Technical view is volatile",
+          "Valuation data is insufficient",
+          "News data unavailable",
+          "Pay attention to volatility risk; not investment advice",
+          "Research summary is for reference only and not investment advice.",
           List.of(new DataEvidence(
               "Sina Finance",
-              "贵州茅台实时行情",
-              "最新价 1510.00",
+              "Kweichow Moutai realtime quote",
+              "Latest price 1510.00",
               LocalDateTime.of(2026, 7, 1, 10, 30)
-          ))
+          )),
+          List.of(new ReportInsight(
+              "MARKET",
+              "Market quote evidence",
+              "Realtime quote data anchors the report to observable market movement.",
+              List.of("Kweichow Moutai realtime quote"),
+              "LOW",
+              new BigDecimal("0.90")
+          )),
+          new ReportQuality(
+              20,
+              List.of("FINANCIAL", "VALUATION", "PEER", "NEWS"),
+              List.of("Missing FINANCIAL evidence: financial indicators were unavailable.")
+          )
       );
     }
   }
@@ -212,7 +236,7 @@ class AdvisorControllerTest {
     public AdvisorTaskResponse getTask(String taskId) {
       return new AdvisorTaskResponse(
           taskId,
-          "帮我分析600519",
+          "Analyze 600519",
           "full",
           AdvisorTaskStatus.COMPLETED,
           1L,
@@ -229,7 +253,7 @@ class AdvisorControllerTest {
     public StockQuote getRealtimeQuote(StockSymbol symbol) {
       return new StockQuote(
           symbol.code(),
-          "贵州茅台",
+          "Kweichow Moutai",
           new BigDecimal("1510.00"),
           new BigDecimal("1490.00"),
           new BigDecimal("1.34"),
@@ -250,7 +274,7 @@ class AdvisorControllerTest {
     @Override
     public List<StockNewsItem> getRecentNews(StockSymbol symbol, int limit) {
       return List.of(new StockNewsItem(
-          "贵州茅台新闻",
+          "Kweichow Moutai news",
           "https://finance.sina.com.cn/news1.shtml",
           LocalDateTime.of(2026, 7, 2, 17, 20),
           "Sina Finance"

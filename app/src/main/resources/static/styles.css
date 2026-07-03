@@ -1,0 +1,284 @@
+:root {
+  color-scheme: light;
+  --bg: #f5f7fb;
+  --panel: #ffffff;
+  --panel-strong: #f0f4f8;
+  --border: #d9e2ec;
+  --text: #172033;
+  --muted: #607089;
+  --accent: #2563eb;
+  --accent-strong: #1d4ed8;
+  --good: #0f8a5f;
+  --warn: #b45309;
+  --bad: #b91c1c;
+  font-family: Inter, "Segoe UI", Arial, sans-serif;
+}
+
+* {
+  box-sizing: border-box;
+}
+
+body {
+  margin: 0;
+  background: var(--bg);
+  color: var(--text);
+}
+
+button,
+input,
+select {
+  font: inherit;
+}
+
+button {
+  border: 0;
+  border-radius: 6px;
+  background: var(--accent);
+  color: #fff;
+  cursor: pointer;
+  padding: 10px 14px;
+}
+
+button:hover {
+  background: var(--accent-strong);
+}
+
+input,
+select {
+  border: 1px solid var(--border);
+  border-radius: 6px;
+  min-height: 40px;
+  padding: 8px 10px;
+  color: var(--text);
+  background: #fff;
+}
+
+.app-shell {
+  display: grid;
+  grid-template-columns: minmax(0, 1fr) 340px;
+  gap: 20px;
+  max-width: 1440px;
+  min-height: 100vh;
+  margin: 0 auto;
+  padding: 24px;
+}
+
+.workspace,
+.history-panel,
+.query-panel,
+.report-card {
+  background: var(--panel);
+  border: 1px solid var(--border);
+  border-radius: 8px;
+}
+
+.workspace {
+  display: flex;
+  flex-direction: column;
+  gap: 16px;
+  padding: 20px;
+}
+
+.topbar,
+.report-header {
+  display: flex;
+  align-items: flex-start;
+  justify-content: space-between;
+  gap: 16px;
+}
+
+.eyebrow {
+  margin: 0 0 4px;
+  color: var(--muted);
+  font-size: 12px;
+  text-transform: uppercase;
+}
+
+h1,
+h2,
+h3,
+p {
+  margin-top: 0;
+}
+
+h1 {
+  margin-bottom: 0;
+  font-size: 28px;
+}
+
+h2 {
+  margin-bottom: 12px;
+  font-size: 20px;
+}
+
+h3 {
+  margin-bottom: 10px;
+  font-size: 16px;
+}
+
+.status {
+  min-width: 72px;
+  border-radius: 999px;
+  background: var(--panel-strong);
+  color: var(--muted);
+  padding: 6px 10px;
+  text-align: center;
+  font-size: 13px;
+}
+
+.query-panel {
+  padding: 16px;
+}
+
+.query-panel label {
+  display: block;
+  margin-bottom: 8px;
+  color: var(--muted);
+  font-size: 13px;
+}
+
+.query-row {
+  display: grid;
+  grid-template-columns: minmax(180px, 1fr) 140px auto;
+  gap: 10px;
+}
+
+.report-panel {
+  min-height: 520px;
+}
+
+.empty-state {
+  display: grid;
+  min-height: 520px;
+  place-items: center;
+  color: var(--muted);
+  text-align: center;
+}
+
+.report-card {
+  padding: 18px;
+}
+
+.quality-card {
+  min-width: 136px;
+  border-radius: 8px;
+  padding: 12px;
+  text-align: center;
+  color: #fff;
+}
+
+.quality-card.good {
+  background: var(--good);
+}
+
+.quality-card.warn {
+  background: var(--warn);
+}
+
+.quality-card.bad {
+  background: var(--bad);
+}
+
+.quality-score {
+  display: block;
+  font-size: 28px;
+  font-weight: 700;
+}
+
+.section {
+  border-top: 1px solid var(--border);
+  padding-top: 16px;
+  margin-top: 16px;
+}
+
+.quality-detail,
+.evidence-item,
+.insight-list details,
+.history-item {
+  border: 1px solid var(--border);
+  border-radius: 8px;
+  background: #fff;
+}
+
+.quality-detail {
+  padding: 12px;
+  color: var(--muted);
+}
+
+.insight-list,
+.evidence-list,
+.history-list {
+  display: grid;
+  gap: 10px;
+}
+
+.insight-list details {
+  padding: 12px;
+}
+
+.insight-list summary {
+  cursor: pointer;
+  font-weight: 700;
+}
+
+.meta-row {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 8px;
+  margin-top: 8px;
+  color: var(--muted);
+  font-size: 13px;
+}
+
+.tag {
+  border-radius: 999px;
+  background: var(--panel-strong);
+  padding: 3px 8px;
+}
+
+.evidence-item {
+  padding: 12px;
+}
+
+.evidence-item strong {
+  display: block;
+  margin-bottom: 6px;
+}
+
+.evidence-value {
+  color: var(--muted);
+  overflow-wrap: anywhere;
+}
+
+.history-panel {
+  padding: 18px;
+}
+
+.history-form {
+  display: grid;
+  grid-template-columns: 1fr auto;
+  gap: 8px;
+  margin-bottom: 14px;
+}
+
+.history-item {
+  width: 100%;
+  color: var(--text);
+  background: #fff;
+  text-align: left;
+}
+
+.history-item:hover {
+  border-color: var(--accent);
+}
+
+@media (max-width: 900px) {
+  .app-shell {
+    grid-template-columns: 1fr;
+    padding: 14px;
+  }
+
+  .query-row {
+    grid-template-columns: 1fr;
+  }
+}
