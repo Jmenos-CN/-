@@ -80,6 +80,28 @@ class AdvisorAnalysisServiceTest {
   }
 
   @Test
+  void generatesReadableChineseQuoteSummaryAndConclusion() {
+    AdvisorAnalysisService service = service(
+        new StubStockDataPort(),
+        new StubStockNewsPort(),
+        new StubStockFinancialPort(),
+        new AdvisorWorkflowService(List.of(
+            context -> new SingleAgentAnalysis(AgentRole.FUNDAMENTAL, "基本面稳健，收入和利润数据需要结合最新财报确认。")
+        )),
+        new CapturingAdvisorReportService()
+    );
+
+    ResearchReport report = service.analyze("帮我分析600519", "full");
+
+    assertThat(report.quoteSummary())
+        .contains("最新价", "昨收", "涨跌幅", "成交量", "成交额", "行情时间")
+        .doesNotContain("鏈", "锛", "閸", "鐢", "璇");
+    assertThat(report.conclusion())
+        .contains("Kweichow Moutai", "当前行情摘要", "Agent 分析摘要", "不构成投资建议")
+        .doesNotContain("鏈", "锛", "閸", "鐢", "璇");
+  }
+
+  @Test
   void returnsCachedReportForRepeatedRequestWithoutRunningExpensiveChainAgain() {
     CountingStockDataPort stockDataPort = new CountingStockDataPort();
     CountingStockNewsPort stockNewsPort = new CountingStockNewsPort();

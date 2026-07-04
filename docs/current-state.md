@@ -39,6 +39,8 @@ Implemented scope:
   available, `valuationView` falls back to the basic PE/PB/ROE explanation.
 - Advisor Agent context now includes a deterministic `Peer comparison summary`; `valuationView` includes peer comparison
   when a configured peer group is available.
+- Deterministic quote summary and fallback conclusion use readable Chinese copy with an explicit
+  non-investment-advice disclaimer; service tests now protect this contract from mojibake regressions.
 - Generated reports now include deterministic explainability metadata:
   `insights` maps evidence sources to MARKET/FINANCIAL/VALUATION/PEER/NEWS explanation items, and `quality` scores
   evidence completeness from 0 to 100 with missing-data warnings.
