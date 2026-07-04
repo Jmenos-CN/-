@@ -48,6 +48,8 @@ Implemented scope:
   without re-running external data calls or LLM Agents.
 - A lightweight Spring Boot static report UI is available at `/`. It can generate reports, query report history,
   display `qualityScore` as a quality prompt, expand `insights`, and render the historical report evidence chain.
+- Static report UI copy is readable Chinese, and contract tests protect the direct synchronous `/api/advisor/analyze`
+  demo flow from regressing back to task polling.
 - The static UI intentionally uses the direct `/api/advisor/analyze` path so the demo stays focused on the Agent
   chain rather than task orchestration.
 - Redis Stream async analysis tasks are available:
