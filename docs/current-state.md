@@ -46,6 +46,8 @@ Implemented scope:
   without re-running external data calls or LLM Agents.
 - A lightweight Spring Boot static report UI is available at `/`. It can generate reports, query report history,
   display `qualityScore` as a quality prompt, expand `insights`, and render the historical report evidence chain.
+- The static UI intentionally uses the direct `/api/advisor/analyze` path so the demo stays focused on the Agent
+  chain rather than task orchestration.
 - Redis Stream async analysis tasks are available:
   `POST /api/advisor/tasks` creates a task, `GET /api/advisor/tasks/{taskId}` reads task state.
 - Async task state is persisted in PostgreSQL table `stock_advisor_task`; Redis Stream key `advisor:tasks`
@@ -102,6 +104,3 @@ Known notes:
 - Report UI browser smoke test against local H2 startup passed on 2026-07-03:
   opened `/`, generated `Analyze 600519`, verified the quality card, 9 expandable insights, history list, and 9 evidence
   items in historical report detail.
-
-- Report UI async task browser smoke test against local H2 startup passed on 2026-07-03:
-  opened `/`, submitted `Analyze 600519`, verified task status `COMPLETED`, report ID display, `qualityScore=100`, 9 insights, 9 evidence items, and refreshed history.

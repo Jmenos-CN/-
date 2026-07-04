@@ -63,7 +63,10 @@ Cache keys:
 
 If Redis is unavailable, cache reads behave as misses and cache writes are ignored.
 
-## Enable Async Advisor Tasks
+## Optional Async Advisor Tasks
+
+The main demo UI uses `/api/advisor/analyze` directly. Use this section only when you intentionally want to test the
+optional Redis Stream task path.
 
 Async tasks reuse the same optional Redisson connection as the Redis cache. Start the backend with Redis enabled and
 turn on the task consumer:
@@ -87,7 +90,7 @@ Async task APIs:
 $task = Invoke-RestMethod -Uri "http://localhost:8080/api/advisor/tasks" `
   -Method Post `
   -ContentType "application/json; charset=utf-8" `
-  -Body '{"query":"甯垜鍒嗘瀽600519","analysisType":"full"}'
+  -Body '{"query":"帮我分析600519","analysisType":"full"}'
 
 Invoke-RestMethod -Uri "http://localhost:8080/api/advisor/tasks/$($task.data.taskId)" `
   -Method Get
@@ -123,7 +126,7 @@ Do not commit real API keys. If `ADVISOR_LLM_ENABLED=true` but `ADVISOR_LLM_API_
 Invoke-RestMethod -Uri "http://localhost:8080/api/advisor/analyze" `
   -Method Post `
   -ContentType "application/json; charset=utf-8" `
-  -Body '{"query":"甯垜鍒嗘瀽600519","analysisType":"full"}'
+  -Body '{"query":"帮我分析600519","analysisType":"full"}'
 ```
 
 Expected response shape:
@@ -135,14 +138,14 @@ Expected response shape:
   "message": "success",
   "data": {
     "stockCode": "600519",
-    "stockName": "璐靛窞鑼呭彴",
-    "quoteSummary": "鏈€鏂颁环 ...",
+    "stockName": "贵州茅台",
+    "quoteSummary": "最新价 ...",
     "fundamentalView": "LLM generated text when ADVISOR_LLM_ENABLED=true",
     "technicalView": "LLM generated text when ADVISOR_LLM_ENABLED=true",
     "valuationView": "LLM generated text when ADVISOR_LLM_ENABLED=true, otherwise deterministic PE/PB/ROE explanation",
     "newsView": "LLM generated text when ADVISOR_LLM_ENABLED=true",
     "riskView": "LLM generated text when ADVISOR_LLM_ENABLED=true",
-    "conclusion": "...涓嶆瀯鎴愭姇璧勫缓璁?..",
+    "conclusion": "...不构成投资建议...",
     "evidences": [],
     "insights": [],
     "quality": {
@@ -203,7 +206,7 @@ Use a fresh `analysisType` to bypass report cache and verify the K-line/news/fin
 
 ```powershell
 $analysisType = "news-smoke-" + [DateTimeOffset]::Now.ToUnixTimeSeconds()
-$body = @{ query = "甯垜鍒嗘瀽600519"; analysisType = $analysisType } | ConvertTo-Json
+$body = @{ query = "帮我分析600519"; analysisType = $analysisType } | ConvertTo-Json
 
 Invoke-RestMethod -Uri "http://localhost:8080/api/advisor/analyze" `
   -Method Post `
@@ -247,27 +250,3 @@ Expected response:
 - `success` is `true`
 - list items include `id`, `stockCode`, `stockName`, `quoteSummary`, and `createdAt`
 - detail responses include `quality`, `insights`, and `evidences` for the static report UI.
-
-## Static UI Async Task Flow
-
-For local UI testing, enable the task consumer so the in-memory task queue can be drained:
-
-```powershell
-$env:SERVER_PORT="18080"
-$env:ADVISOR_LLM_ENABLED="false"
-$env:APP_CACHE_REDIS_ENABLED="false"
-$env:APP_ADVISOR_TASKS_CONSUMER_ENABLED="true"
-$env:APP_ADVISOR_TASKS_CONSUMER_FIXED_DELAY="500"
-
-.\gradlew.bat :app:bootRun --console=plain
-```
-
-Open `http://localhost:18080/`, submit `Analyze 600519`, and verify:
-
-- the task card shows a task ID and status changes;
-- completed tasks show a report ID;
-- the completed report detail loads automatically;
-- the report renders quality score, expandable insights, and evidence chain;
-- history refreshes and clicking a history item loads the same explainability fields.
-
-When Redis is enabled, the same UI flow uses `RedissonAdvisorTaskQueue` and Redis Stream instead of the in-memory queue.

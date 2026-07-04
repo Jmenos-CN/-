@@ -154,12 +154,16 @@ Reason:
   detail evidence chain.
 - The UI remains easy to replace with a full React frontend later because it only depends on stable REST endpoints.
 
-## Use Async Task APIs As The Primary Report UI Flow
+## Keep Demo UI Focused On The Synchronous Agent Chain
 
-Decision: make the static report UI create advisor tasks and poll task status instead of calling the synchronous analyze endpoint directly.
+Decision: keep the static report UI on the direct `/api/advisor/analyze` flow and treat async task APIs as optional
+backend infrastructure.
 
 Reason:
 
-- The UI should demonstrate the full async delivery path that later maps to Redis Stream in production.
-- Long-running data and Agent calls no longer block the initial user action; the user sees task state while work continues.
-- The synchronous `/api/advisor/analyze` endpoint remains useful for API smoke tests and direct debugging.
+- The project is positioned as a lightweight Agent demo, so the primary experience should be easy to explain:
+  stock query -> data collection -> Agent analysis -> report rendering.
+- Redis Stream task delivery is useful for backend experiments, but making it the default UI path over-emphasizes
+  engineering infrastructure instead of the Agent itself.
+- The simpler UI still validates the most important product behavior: report generation, explainability, evidence
+  display, and historical report lookup.
