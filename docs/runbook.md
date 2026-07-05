@@ -21,6 +21,8 @@
 Local startup uses an H2 in-memory datasource by default and creates advisor tables with `ddl-auto=update`.
 After startup, open `http://localhost:8080/` to use the lightweight static report UI.
 
+For the shortest end-to-end demo path, see `docs/demo-guide.md`.
+
 ## Start With Remote PostgreSQL
 
 Use this only when you want the Java advisor project to persist reports into the existing Ubuntu PostgreSQL instance:

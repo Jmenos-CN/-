@@ -52,6 +52,7 @@ Implemented scope:
   demo flow from regressing back to task polling.
 - The static UI intentionally uses the direct `/api/advisor/analyze` path so the demo stays focused on the Agent
   chain rather than task orchestration.
+- Added `docs/demo-guide.md` as the concise end-to-end demo and interview explanation guide.
 - Redis Stream async analysis tasks are available:
   `POST /api/advisor/tasks` creates a task, `GET /api/advisor/tasks/{taskId}` reads task state.
 - Async task state is persisted in PostgreSQL table `stock_advisor_task`; Redis Stream key `advisor:tasks`
