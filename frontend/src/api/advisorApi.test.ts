@@ -1,5 +1,5 @@
 import { afterEach, describe, expect, it, vi } from 'vitest';
-import { analyzeReport, fetchReportDetail, fetchReportHistory } from './advisorApi';
+import { analyzeReport, askFollowUp, fetchReportDetail, fetchReportHistory } from './advisorApi';
 
 function okJson(data: unknown) {
   return {
@@ -45,5 +45,27 @@ describe('advisorApi', () => {
 
     expect(result).toEqual(report);
     expect(fetchMock).toHaveBeenCalledWith('/api/advisor/reports/7', undefined);
+  });
+
+  it('posts follow-up question against an existing report', async () => {
+    const answer = {
+      reportId: 7,
+      question: '最大的风险是什么？',
+      answer: '主要风险是估值回撤。',
+      citedEvidence: ['贵州茅台实时行情'],
+      contextSources: ['report:7'],
+      llmEnabled: true,
+      answeredAt: '2026-07-07T12:00:00'
+    };
+    const fetchMock = vi.spyOn(globalThis, 'fetch').mockResolvedValue(okJson(answer));
+
+    const result = await askFollowUp(7, '最大的风险是什么？');
+
+    expect(result).toEqual(answer);
+    expect(fetchMock).toHaveBeenCalledWith('/api/advisor/reports/7/follow-up', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json; charset=utf-8' },
+      body: JSON.stringify({ question: '最大的风险是什么？' })
+    });
   });
 });

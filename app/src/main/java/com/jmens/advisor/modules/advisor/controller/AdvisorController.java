@@ -4,8 +4,11 @@ import com.jmens.advisor.common.api.Result;
 import com.jmens.advisor.modules.advisor.domain.AdvisorRequest;
 import com.jmens.advisor.modules.advisor.domain.AdvisorReportSummary;
 import com.jmens.advisor.modules.advisor.domain.AdvisorTaskResponse;
+import com.jmens.advisor.modules.advisor.domain.FollowUpRequest;
+import com.jmens.advisor.modules.advisor.domain.FollowUpResponse;
 import com.jmens.advisor.modules.advisor.domain.ResearchReport;
 import com.jmens.advisor.modules.advisor.service.AdvisorAnalysisService;
+import com.jmens.advisor.modules.advisor.service.AdvisorFollowUpService;
 import com.jmens.advisor.modules.advisor.service.AdvisorReportService;
 import com.jmens.advisor.modules.advisor.service.AdvisorTaskService;
 import jakarta.validation.Valid;
@@ -25,15 +28,18 @@ public class AdvisorController {
   private final AdvisorAnalysisService advisorAnalysisService;
   private final AdvisorReportService advisorReportService;
   private final AdvisorTaskService advisorTaskService;
+  private final AdvisorFollowUpService advisorFollowUpService;
 
   public AdvisorController(
       AdvisorAnalysisService advisorAnalysisService,
       AdvisorReportService advisorReportService,
-      AdvisorTaskService advisorTaskService
+      AdvisorTaskService advisorTaskService,
+      AdvisorFollowUpService advisorFollowUpService
   ) {
     this.advisorAnalysisService = advisorAnalysisService;
     this.advisorReportService = advisorReportService;
     this.advisorTaskService = advisorTaskService;
+    this.advisorFollowUpService = advisorFollowUpService;
   }
 
   @PostMapping("/analyze")
@@ -49,6 +55,21 @@ public class AdvisorController {
   @GetMapping("/reports")
   public Result<List<AdvisorReportSummary>> findRecentReports(@RequestParam String stockCode) {
     return Result.ok(advisorReportService.findRecentReports(stockCode));
+  }
+
+  /**
+   * Answers a follow-up question using the saved report as the grounding context.
+   *
+   * @param id source report ID
+   * @param request user follow-up question
+   * @return grounded answer with cited evidence and context source markers
+   */
+  @PostMapping("/reports/{id}/follow-up")
+  public Result<FollowUpResponse> followUp(
+      @PathVariable Long id,
+      @Valid @RequestBody FollowUpRequest request
+  ) {
+    return Result.ok(advisorFollowUpService.answer(id, request.question()));
   }
 
   /**

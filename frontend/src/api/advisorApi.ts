@@ -1,4 +1,10 @@
-import type { AdvisorReportSummary, AdvisorRequest, ResearchReport, Result } from '../types/advisor';
+import type {
+  AdvisorReportSummary,
+  AdvisorRequest,
+  FollowUpResponse,
+  ResearchReport,
+  Result
+} from '../types/advisor';
 
 async function requestJson<T>(url: string, init?: RequestInit): Promise<T> {
   const response = await fetch(url, init);
@@ -29,4 +35,12 @@ export function fetchReportHistory(stockCode: string): Promise<AdvisorReportSumm
 
 export function fetchReportDetail(id: number): Promise<ResearchReport> {
   return requestJson<ResearchReport>(`/api/advisor/reports/${encodeURIComponent(id)}`, undefined);
+}
+
+export function askFollowUp(reportId: number, question: string): Promise<FollowUpResponse> {
+  return requestJson<FollowUpResponse>(`/api/advisor/reports/${encodeURIComponent(reportId)}/follow-up`, {
+    method: 'POST',
+    headers: { 'Content-Type': 'application/json; charset=utf-8' },
+    body: JSON.stringify({ question })
+  });
 }

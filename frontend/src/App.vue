@@ -1,24 +1,32 @@
 <script setup lang="ts">
 import { computed, ref } from 'vue';
-import { analyzeReport, fetchReportDetail, fetchReportHistory } from './api/advisorApi';
-import type { AdvisorReportSummary, ResearchReport } from './types/advisor';
+import { analyzeReport, askFollowUp, fetchReportDetail, fetchReportHistory } from './api/advisorApi';
+import type { AdvisorReportSummary, FollowUpResponse, ResearchReport } from './types/advisor';
 
 const query = ref('Analyze 600519');
 const analysisType = ref('full');
 const historyStockCode = ref('600519');
 const report = ref<ResearchReport | null>(null);
+const currentReportId = ref<number | null>(null);
 const history = ref<AdvisorReportSummary[]>([]);
 const loading = ref(false);
 const historyLoading = ref(false);
+const followUpLoading = ref(false);
 const errorMessage = ref('');
+const followUpError = ref('');
 const lastDurationMs = ref<number | null>(null);
 const followUpQuestion = ref('');
+const followUpAnswer = ref<FollowUpResponse | null>(null);
 
 const rawJson = computed(() => {
   if (!report.value) {
     return '尚未生成报告';
   }
-  return JSON.stringify(report.value, null, 2);
+  return JSON.stringify({
+    reportId: currentReportId.value,
+    report: report.value,
+    followUp: followUpAnswer.value
+  }, null, 2);
 });
 
 const qualityScore = computed(() => report.value?.quality?.qualityScore ?? 0);
@@ -38,6 +46,11 @@ const llmHint = computed(() => {
   if (!report.value) {
     return '尚未请求后端';
   }
+  if (followUpAnswer.value) {
+    return followUpAnswer.value.llmEnabled
+      ? '追问已通过后端 LangChain4j 链路生成'
+      : '追问返回了可解释降级结果；如需真实 LLM，请启用后端 LLM 配置';
+  }
   const filledCount = agentSections.value.filter((item) => item.content.trim().length > 0).length;
   if (filledCount >= 4) {
     return '检测到多段 Agent 分析内容，可用于观察真实 LLM 或降级输出效果';
@@ -49,6 +62,7 @@ const llmHint = computed(() => {
 });
 
 const hasReport = computed(() => report.value !== null);
+const canAskFollowUp = computed(() => currentReportId.value !== null && followUpQuestion.value.trim().length > 0);
 
 async function generateReport() {
   if (!query.value.trim()) {
@@ -56,6 +70,9 @@ async function generateReport() {
     return;
   }
   errorMessage.value = '';
+  followUpError.value = '';
+  followUpAnswer.value = null;
+  currentReportId.value = null;
   loading.value = true;
   const startedAt = performance.now();
   try {
@@ -66,7 +83,8 @@ async function generateReport() {
     report.value = result;
     historyStockCode.value = result.stockCode;
     lastDurationMs.value = Math.round(performance.now() - startedAt);
-    await loadHistory(result.stockCode, true);
+    const reports = await loadHistory(result.stockCode, true);
+    currentReportId.value = reports[0]?.id ?? null;
   } catch (error) {
     errorMessage.value = error instanceof Error ? error.message : '生成报告失败';
   } finally {
@@ -74,19 +92,22 @@ async function generateReport() {
   }
 }
 
-async function loadHistory(stockCode = historyStockCode.value, quiet = false) {
+async function loadHistory(stockCode = historyStockCode.value, quiet = false): Promise<AdvisorReportSummary[]> {
   if (!stockCode.trim()) {
     errorMessage.value = '请输入股票代码后再查询历史';
-    return;
+    return [];
   }
   if (!quiet) {
     errorMessage.value = '';
   }
   historyLoading.value = true;
   try {
-    history.value = await fetchReportHistory(stockCode.trim());
+    const reports = await fetchReportHistory(stockCode.trim());
+    history.value = reports;
+    return reports;
   } catch (error) {
     errorMessage.value = error instanceof Error ? error.message : '查询历史失败';
+    return [];
   } finally {
     historyLoading.value = false;
   }
@@ -94,13 +115,36 @@ async function loadHistory(stockCode = historyStockCode.value, quiet = false) {
 
 async function loadReport(id: number) {
   errorMessage.value = '';
+  followUpError.value = '';
+  followUpAnswer.value = null;
   loading.value = true;
   try {
     report.value = await fetchReportDetail(id);
+    currentReportId.value = id;
   } catch (error) {
     errorMessage.value = error instanceof Error ? error.message : '加载报告详情失败';
   } finally {
     loading.value = false;
+  }
+}
+
+async function submitFollowUp() {
+  if (currentReportId.value === null) {
+    followUpError.value = '请先生成报告，或从历史报告中打开一份报告';
+    return;
+  }
+  if (!followUpQuestion.value.trim()) {
+    followUpError.value = '请输入追问内容';
+    return;
+  }
+  followUpError.value = '';
+  followUpLoading.value = true;
+  try {
+    followUpAnswer.value = await askFollowUp(currentReportId.value, followUpQuestion.value.trim());
+  } catch (error) {
+    followUpError.value = error instanceof Error ? error.message : '追问失败';
+  } finally {
+    followUpLoading.value = false;
   }
 }
 </script>
@@ -125,6 +169,10 @@ async function loadReport(id: number) {
       <section class="mini-panel">
         <span>后端</span>
         <strong>/api/advisor/analyze</strong>
+      </section>
+      <section class="mini-panel">
+        <span>当前报告 ID</span>
+        <strong>{{ currentReportId ?? '-' }}</strong>
       </section>
       <section class="mini-panel">
         <span>响应耗时</span>
@@ -240,9 +288,26 @@ async function loadReport(id: number) {
 
       <section class="panel follow-up">
         <h3>基于当前报告追问</h3>
-        <textarea v-model="followUpQuestion" placeholder="例如：为什么估值偏高？" disabled></textarea>
-        <button disabled>下一阶段接入</button>
-        <p class="muted">预留入口：后续可接 `/api/advisor/reports/{id}/follow-up`，基于当前报告证据链回答追问。</p>
+        <textarea v-model="followUpQuestion" placeholder="例如：为什么估值偏高？最大的风险是什么？"></textarea>
+        <button
+          data-test="follow-up-submit"
+          :disabled="followUpLoading || !canAskFollowUp"
+          @click="submitFollowUp"
+        >
+          {{ followUpLoading ? '追问中' : '提交追问' }}
+        </button>
+        <p v-if="followUpError" class="error">{{ followUpError }}</p>
+        <article v-if="followUpAnswer" class="follow-up-answer">
+          <strong>{{ followUpAnswer.llmEnabled ? 'LLM 回答' : '降级回答' }}</strong>
+          <p>{{ followUpAnswer.answer }}</p>
+          <div class="tags">
+            <span v-for="evidence in followUpAnswer.citedEvidence" :key="evidence">{{ evidence }}</span>
+          </div>
+          <div class="tags">
+            <span v-for="source in followUpAnswer.contextSources" :key="source">{{ source }}</span>
+          </div>
+        </article>
+        <p class="muted">追问会调用 `/api/advisor/reports/{id}/follow-up`，基于当前报告分析段落与证据链回答。</p>
       </section>
 
       <section class="panel json-panel">

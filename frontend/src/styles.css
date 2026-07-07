@@ -373,6 +373,19 @@ summary {
   font-size: 12px;
 }
 
+.follow-up-answer {
+  border: 1px solid #ded7ca;
+  border-radius: 6px;
+  background: #fffdf8;
+  margin-top: 10px;
+  padding: 10px;
+}
+
+.follow-up-answer strong {
+  display: block;
+  margin-bottom: 6px;
+}
+
 .json-panel pre {
   max-height: 360px;
   overflow: auto;

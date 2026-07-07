@@ -12,10 +12,12 @@ import com.jmens.advisor.modules.advisor.config.PeerGroupProperties;
 import com.jmens.advisor.modules.advisor.domain.AdvisorReportSummary;
 import com.jmens.advisor.modules.advisor.domain.AdvisorTaskResponse;
 import com.jmens.advisor.modules.advisor.domain.DataEvidence;
+import com.jmens.advisor.modules.advisor.domain.FollowUpResponse;
 import com.jmens.advisor.modules.advisor.domain.ReportInsight;
 import com.jmens.advisor.modules.advisor.domain.ReportQuality;
 import com.jmens.advisor.modules.advisor.domain.ResearchReport;
 import com.jmens.advisor.modules.advisor.service.AdvisorAnalysisService;
+import com.jmens.advisor.modules.advisor.service.AdvisorFollowUpService;
 import com.jmens.advisor.modules.advisor.service.AdvisorReportService;
 import com.jmens.advisor.modules.advisor.service.AdvisorTaskService;
 import com.jmens.advisor.modules.advisor.service.AdvisorTaskStatus;
@@ -78,7 +80,12 @@ class AdvisorControllerTest {
         new CacheTtlProperties(null, null, null, null, null)
     );
     mockMvc = MockMvcBuilders.standaloneSetup(
-        new AdvisorController(analysisService, new StubAdvisorReportService(), new StubAdvisorTaskService())
+        new AdvisorController(
+            analysisService,
+            new StubAdvisorReportService(),
+            new StubAdvisorTaskService(),
+            new StubAdvisorFollowUpService()
+        )
     ).build();
   }
 
@@ -141,6 +148,21 @@ class AdvisorControllerTest {
         .andExpect(jsonPath("$.data.taskId").value("task-1"))
         .andExpect(jsonPath("$.data.status").value("COMPLETED"))
         .andExpect(jsonPath("$.data.reportId").value(1));
+  }
+
+  @Test
+  void answersFollowUpQuestionAgainstExistingReport() throws Exception {
+    mockMvc.perform(post("/api/advisor/reports/1/follow-up")
+            .contentType(MediaType.APPLICATION_JSON)
+            .content("{\"question\":\"这只股票最大的风险是什么？\"}"))
+        .andExpect(status().isOk())
+        .andExpect(jsonPath("$.success").value(true))
+        .andExpect(jsonPath("$.data.reportId").value(1))
+        .andExpect(jsonPath("$.data.question").value("这只股票最大的风险是什么？"))
+        .andExpect(jsonPath("$.data.answer").value(Matchers.containsString("波动风险")))
+        .andExpect(jsonPath("$.data.citedEvidence[0]").value("Kweichow Moutai realtime quote"))
+        .andExpect(jsonPath("$.data.contextSources[0]").value("report:1"))
+        .andExpect(jsonPath("$.data.llmEnabled").value(true));
   }
 
   private static class CapturingAdvisorReportService extends AdvisorReportService {
@@ -243,6 +265,26 @@ class AdvisorControllerTest {
           null,
           LocalDateTime.of(2026, 7, 1, 10, 30),
           LocalDateTime.of(2026, 7, 1, 10, 31)
+      );
+    }
+  }
+
+  private static class StubAdvisorFollowUpService extends AdvisorFollowUpService {
+
+    StubAdvisorFollowUpService() {
+      super(null, java.util.Optional.empty());
+    }
+
+    @Override
+    public FollowUpResponse answer(Long reportId, String question) {
+      return new FollowUpResponse(
+          reportId,
+          question,
+          "主要关注价格波动风险和证据覆盖不足。",
+          List.of("Kweichow Moutai realtime quote"),
+          List.of("report:" + reportId),
+          true,
+          LocalDateTime.of(2026, 7, 1, 10, 35)
       );
     }
   }

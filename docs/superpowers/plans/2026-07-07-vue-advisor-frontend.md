@@ -12,10 +12,18 @@
 
 ## Tasks
 
-- [ ] Add frontend package, Vite config, TypeScript config, and Vitest setup.
-- [ ] Write failing API client tests for analyze, history, and report detail.
-- [ ] Implement typed API client and advisor DTOs.
-- [ ] Write failing App contract test for the integration workbench.
-- [ ] Implement `App.vue`, `main.ts`, and CSS.
-- [ ] Update `docs/runbook.md` and `docs/current-state.md`.
-- [ ] Run `pnpm test -- --run`, `pnpm build`, backend compile/tests, and a local smoke check when possible.
+- [x] Add frontend package, Vite config, TypeScript config, and Vitest setup.
+- [x] Write failing API client tests for analyze, history, and report detail.
+- [x] Implement typed API client and advisor DTOs.
+- [x] Write failing App contract test for the integration workbench.
+- [x] Implement `App.vue`, `main.ts`, and CSS.
+- [x] Update `docs/runbook.md` and `docs/current-state.md`.
+- [x] Run `pnpm test -- --run`, `pnpm build`, backend compile/tests, and a local smoke check when possible.
+
+## Follow-Up Extension
+
+- [x] Add backend TDD coverage for `POST /api/advisor/reports/{id}/follow-up`.
+- [x] Implement report-scoped follow-up DTOs, service, and controller endpoint.
+- [x] Add frontend API and UI tests for report follow-up.
+- [x] Connect the Vue follow-up panel to the real backend endpoint.
+- [x] Run final compile/build/test/smoke verification after the follow-up implementation.

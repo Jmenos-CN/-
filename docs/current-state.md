@@ -50,7 +50,11 @@ Implemented scope:
   display `qualityScore` as a quality prompt, expand `insights`, and render the historical report evidence chain.
 - An independent Vue 3 + Vite integration frontend is available under `frontend/`. It calls the real Spring Boot
   APIs through a Vite `/api` proxy and displays report generation, five Agent views, quality score, insights,
-  evidences, report history, raw JSON, and a reserved report follow-up area.
+  evidences, report history, raw JSON, and report-scoped follow-up Q&A.
+- Report follow-up is available at `POST /api/advisor/reports/{id}/follow-up`. It reads the saved report snapshot,
+  builds a grounded prompt from the five analysis sections plus evidence chain, and calls the optional LangChain4j
+  `ChatModel`. When LLM is disabled, it returns an explicit fallback answer with the same cited evidence and context
+  source markers so the front-backend chain remains testable.
 - Static report UI copy is readable Chinese, and contract tests protect the direct synchronous `/api/advisor/analyze`
   demo flow from regressing back to task polling.
 - The static UI intentionally uses the direct `/api/advisor/analyze` path so the demo stays focused on the Agent
@@ -84,7 +88,8 @@ Known notes:
 - The current API returns a `ResearchReport` with quote summary, role-based Agent sections,
   compliance-guarded conclusion, and data evidence.
 - LLM Agent wiring is disabled by default so local tests and startup do not require external API credentials.
-  Set `ADVISOR_LLM_ENABLED=true` and `ADVISOR_LLM_API_KEY` to enable real model-generated sections.
+  Set `ADVISOR_LLM_ENABLED=true` and `ADVISOR_LLM_API_KEY` to enable real model-generated sections and report
+  follow-up answers.
 - Remote PostgreSQL `jmenos_interview_guide` is reachable at `192.168.150.101:5432` and already has pgvector enabled.
   Use `SPRING_JPA_HIBERNATE_DDL_AUTO=update` only when intentionally creating or updating advisor tables.
 - Remote Redis `192.168.150.101:6379` is reachable and returns `PONG`; Redis cache can be enabled without changing code.
@@ -112,3 +117,9 @@ Known notes:
 - Report UI browser smoke test against local H2 startup passed on 2026-07-03:
   opened `/`, generated `Analyze 600519`, verified the quality card, 9 expandable insights, history list, and 9 evidence
   items in historical report detail.
+- Report follow-up smoke test against remote PostgreSQL and Redis passed on 2026-07-07:
+  `/api/advisor/analyze` generated a new `600519` report, history returned `reportId=11`, and
+  `/api/advisor/reports/11/follow-up` returned `code=200` with 9 cited evidence items. LLM was disabled in this smoke
+  run, so the endpoint correctly returned the deterministic fallback answer with `llmEnabled=false`.
+- The remote `stock_advisor_report` table was an older schema and was manually brought up to date on 2026-07-07 by
+  adding `insights_json` and `quality_json` with safe defaults. This only affected the advisor demo table.

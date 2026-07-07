@@ -55,3 +55,13 @@ export interface AdvisorReportSummary {
   quoteSummary: string;
   createdAt: string;
 }
+
+export interface FollowUpResponse {
+  reportId: number;
+  question: string;
+  answer: string;
+  citedEvidence: string[];
+  contextSources: string[];
+  llmEnabled: boolean;
+  answeredAt: string;
+}
