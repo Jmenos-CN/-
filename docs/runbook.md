@@ -23,6 +23,20 @@ After startup, open `http://localhost:8080/` to use the lightweight static repor
 
 For the shortest end-to-end demo path, see `docs/demo-guide.md`.
 
+## Start Vue Integration Frontend
+
+The independent Vue frontend is used for real front-backend integration testing. Keep the backend running on
+`http://localhost:8080`, then start Vite:
+
+```powershell
+cd frontend
+pnpm install
+pnpm dev
+```
+
+Open `http://localhost:5173`. Vite proxies `/api` to the Spring Boot backend, so report generation, report history,
+evidence display, raw JSON inspection, and LLM output checks all use the real backend APIs.
+
 ## Start With Remote PostgreSQL
 
 Use this only when you want the Java advisor project to persist reports into the existing Ubuntu PostgreSQL instance:

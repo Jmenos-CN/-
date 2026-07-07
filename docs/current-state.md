@@ -48,6 +48,9 @@ Implemented scope:
   without re-running external data calls or LLM Agents.
 - A lightweight Spring Boot static report UI is available at `/`. It can generate reports, query report history,
   display `qualityScore` as a quality prompt, expand `insights`, and render the historical report evidence chain.
+- An independent Vue 3 + Vite integration frontend is available under `frontend/`. It calls the real Spring Boot
+  APIs through a Vite `/api` proxy and displays report generation, five Agent views, quality score, insights,
+  evidences, report history, raw JSON, and a reserved report follow-up area.
 - Static report UI copy is readable Chinese, and contract tests protect the direct synchronous `/api/advisor/analyze`
   demo flow from regressing back to task polling.
 - The static UI intentionally uses the direct `/api/advisor/analyze` path so the demo stays focused on the Agent
@@ -67,7 +70,7 @@ Not implemented:
 - Portfolio rebalancing.
 - Paid data provider integration.
 - Secondary news provider integration.
-- Full independent React frontend.
+- Full market overview frontend backed by Java market APIs.
 
 Known notes:
 
