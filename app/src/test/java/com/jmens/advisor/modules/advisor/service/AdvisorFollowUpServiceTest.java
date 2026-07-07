@@ -56,6 +56,23 @@ class AdvisorFollowUpServiceTest {
     assertThat(response.citedEvidence()).containsExactly("贵州茅台实时行情");
   }
 
+  @Test
+  void returnsFallbackWhenLangChain4jCallFails() {
+    ChatModel chatModel = mock(ChatModel.class);
+    when(chatModel.chat(contains("还能买吗？"))).thenThrow(new RuntimeException("quota exhausted"));
+    AdvisorFollowUpService service = new AdvisorFollowUpService(
+        new StubAdvisorReportService(),
+        Optional.of(chatModel)
+    );
+
+    FollowUpResponse response = service.answer(7L, "还能买吗？");
+
+    assertThat(response.llmEnabled()).isFalse();
+    assertThat(response.answer()).contains("LLM 调用失败");
+    assertThat(response.answer()).contains("贵州茅台实时行情");
+    assertThat(response.citedEvidence()).containsExactly("贵州茅台实时行情");
+  }
+
   private static class StubAdvisorReportService extends AdvisorReportService {
 
     StubAdvisorReportService() {

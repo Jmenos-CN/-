@@ -55,6 +55,8 @@ Implemented scope:
   builds a grounded prompt from the five analysis sections plus evidence chain, and calls the optional LangChain4j
   `ChatModel`. When LLM is disabled, it returns an explicit fallback answer with the same cited evidence and context
   source markers so the front-backend chain remains testable.
+- Report follow-up also catches external LLM provider failures, such as quota exhaustion or authentication errors, and
+  returns a grounded fallback answer instead of leaking a raw 500 to the Vue UI.
 - Static report UI copy is readable Chinese, and contract tests protect the direct synchronous `/api/advisor/analyze`
   demo flow from regressing back to task polling.
 - The static UI intentionally uses the direct `/api/advisor/analyze` path so the demo stays focused on the Agent
@@ -121,5 +123,9 @@ Known notes:
   `/api/advisor/analyze` generated a new `600519` report, history returned `reportId=11`, and
   `/api/advisor/reports/11/follow-up` returned `code=200` with 9 cited evidence items. LLM was disabled in this smoke
   run, so the endpoint correctly returned the deterministic fallback answer with `llmEnabled=false`.
+- Real LLM follow-up smoke test with the AI interview platform's local DashScope key reached DashScope on 2026-07-07,
+  but DashScope returned `AllocationQuota.FreeTierOnly` because the free quota was exhausted. After adding provider
+  failure fallback, `/api/advisor/reports/11/follow-up` returned `success=true`, `llmEnabled=false`, and 9 cited
+  evidence items instead of HTTP 500.
 - The remote `stock_advisor_report` table was an older schema and was manually brought up to date on 2026-07-07 by
   adding `insights_json` and `quality_json` with safe defaults. This only affected the advisor demo table.

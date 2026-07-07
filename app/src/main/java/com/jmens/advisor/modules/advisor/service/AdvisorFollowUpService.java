@@ -37,16 +37,25 @@ public class AdvisorFollowUpService {
         .filter(title -> title != null && !title.isBlank())
         .toList();
     List<String> contextSources = buildContextSources(reportId, report);
-    String answer = chatModel
-        .map(model -> model.chat(buildPrompt(report, question)))
-        .orElseGet(() -> fallbackAnswer(report, citedEvidence));
+    boolean usedLlm = chatModel.isPresent();
+    String answer;
+    try {
+      answer = chatModel
+          .map(model -> model.chat(buildPrompt(report, question)))
+          .orElseGet(() -> fallbackAnswer(report, citedEvidence, "LLM 未启用"));
+    } catch (RuntimeException exception) {
+      // External model providers can fail because of quota, authentication, or transient network errors.
+      // The UI should still receive a grounded answer from the saved report instead of a raw 500.
+      usedLlm = false;
+      answer = fallbackAnswer(report, citedEvidence, "LLM 调用失败");
+    }
     return new FollowUpResponse(
         reportId,
         question,
         answer,
         citedEvidence,
         contextSources,
-        chatModel.isPresent(),
+        usedLlm,
         LocalDateTime.now()
     );
   }
@@ -124,11 +133,12 @@ public class AdvisorFollowUpService {
         .orElse("无可用证据");
   }
 
-  private String fallbackAnswer(ResearchReport report, List<String> citedEvidence) {
+  private String fallbackAnswer(ResearchReport report, List<String> citedEvidence, String reason) {
     String evidenceSummary = citedEvidence.isEmpty()
         ? "当前报告没有可引用证据"
         : "可引用证据包括：" + String.join("、", citedEvidence);
-    return "LLM 未启用，无法生成自然语言追问回答。"
+    return reason
+        + "，无法生成自然语言追问回答。"
         + "你仍可以先参考当前报告的风险段落："
         + report.riskView()
         + "。"
